@@ -1,4 +1,6 @@
+# mac
 .DS_Store
+git_exclude
 
 # History files
 .Rhistory
