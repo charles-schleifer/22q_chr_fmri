@@ -6,7 +6,7 @@ output: html_document
 ---
 
 # setup workspace
-```{r}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # clear workspace
 rm(list = ls(all.names = TRUE))
 
