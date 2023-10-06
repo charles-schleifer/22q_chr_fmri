@@ -66,7 +66,7 @@ rgl::rgl.open(); rgl::rgl.close()
 
 ```
 
-load data
+get subject IDs and load demographic data
 ```{r}
 # load CAB-NP network parcellation
 # https://github.com/ColeLab/ColeAnticevicNetPartition
@@ -85,6 +85,7 @@ prisma_dir <- file.path(hoffman,"22qPrisma/qunex_studyfolder/sessions")
 suny_dir <- file.path(hoffman,"Enigma/SUNY/qunex_studyfolder/sessions")
 rome_dir <- file.path(hoffman,"Enigma/Rome/qunex_studyfolder/sessions")
 iop_dir <- file.path(hoffman,"Enigma/IoP/qunex_studyfolder/sessions")
+napls_dir <- file.path(hoffman,"NAPLS_BOLD/NAPLS2/sessions/S_sessions/")
 
 # get list of sessions
 trio_sessions <- list.files(trio_dir,pattern="Q_[0-9]")
@@ -99,11 +100,14 @@ prisma_sessions <- prisma_sessions[! prisma_sessions %in% exclude_sessions]
 suny_sessions <- list.files(suny_dir,pattern="X[0-9]")
 iop_sessions <- list.files(iop_dir,pattern="GQAIMS[0-9]")
 rome_sessions <- c(list.files(rome_dir, pattern="C[0-9]"),list.files(rome_dir, pattern="D[0-9]"))
+#napls_sessions <- list.files(napls_dir,pattern="[0-9]_")
+# get only baseline napls
+napls_sessions <- list.files(napls_dir,pattern="[0-9]_*00")
 
-all_sessions <- c(trio_sessions,prisma_sessions,suny_sessions,rome_sessions,iop_sessions)
+all_sessions <- c(trio_sessions,prisma_sessions,suny_sessions,rome_sessions,iop_sessions, napls_sessions)
 
 # read multisite demo table
-demo_multisite <- read.csv("~/Dropbox/PhD/grants/NIMH_f31_2022/scripts/22q_multisite_demo_f31.csv")
+demo_multisite <- read.csv(file.path(project,"demographics/multisite/22q_multisite_demo_f31.csv"))
 # exclude listed sessions if any are in list
 #demo_multisite <- demo_multisite[! demo_multisite$MRI_S_ID %in% exclude_sessions,]
 # include only subject with mri
@@ -112,7 +116,21 @@ demo_multisite <- filter(demo_multisite, MRI_S_ID %in% all_sessions)
 demo_multisite_bl <- filter(demo_multisite, visit_index==1)
 # filter age
 demo_multisite_bl <- filter(demo_multisite_bl, AGE >= 8 & AGE <= 45)
-  
+
+# read NAPLS baseline demographics
+demo_napls_bl <- read.csv(file.path(project,"demographics/NAPLS/NAPLS_ClientInfo_13Jan2016nocommas.csv"))
+# match napls MRI_S_IDs to demo table
+napls_id_split <- strsplit(napls_sessions, split="_") %>% do.call(rbind,.) %>% as.data.frame
+napls_id_split$MRI_S_ID <- napls_sessions
+napls_id_bl <- filter(napls_id_split, V3=="00")
+napls_id_match <- data.frame(MRI_S_ID=napls_id_bl$MRI_S_ID, SiteNumber=as.numeric(napls_id_bl$V1), SubjectNumber=as.numeric(gsub("S","",napls_id_bl$V2)))
+# merge with demo
+demo_napls_id <- merge(x=demo_napls_bl, y=napls_id_match, by=c("SiteNumber","SubjectNumber"), all.y=TRUE)
+
+```
+
+load movement data
+```{r}
 ## get movement info
 # function to get mapping between boldn and run name from session_hcp.txt
 get_boldn_names <- function(sesh,sessions_dir){
@@ -152,16 +170,22 @@ percent_udvarsme_rome <- lapply(rome_sessions,function(s) get_percent_udvarsme(s
 percent_udvarsme_suny <- lapply(suny_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=suny_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
 # get iop movement
 percent_udvarsme_iop <- lapply(iop_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=iop_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
+# get NAPLS movement
+percent_udvarsme_napls <- lapply(napls_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=napls_dir,bold_name_use="RESTING")) %>% do.call(rbind,.) %>% as.data.frame
+
 
 # combine
-percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop)
+percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop, percent_udvarsme_napls)
 percent_udvarsme_all$percent_udvarsme <- as.numeric(percent_udvarsme_all$percent_udvarsme)
 percent_udvarsme_all$percent_use <- as.numeric(percent_udvarsme_all$percent_use)
 percent_udvarsme_all$MRI_S_ID <- percent_udvarsme_all$sesh
 
 # add movement to demo bl
 demo_multisite_bl <- merge(x=demo_multisite_bl, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+```
 
+load fMRI data
+```{r}
 # read CSV results
 # function to read parcellated results and add columns for roi pair name, site, and ID 
 read_csv_results <- function(sdir, fname, sesh, site){
@@ -178,14 +202,17 @@ read_csv_results <- function(sdir, fname, sesh, site){
 # RSFA
 rsfa_name <- "resting_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
 rsfa_name_prisma <- "restingAP_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+rsfa_name_napls <- "RESTING_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
 
 # local connectivity
 netho_name <- "resting_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
 netho_name_prisma <- "restingAP_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+netho_name_napls <- "RESTING_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
 
 # between parcel connectivity
 bparc_name <- "resting_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
 bparc_name_prisma <- "restingAP_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
+bparc_name_napls <- "RESTING_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
 
 # read rsfa
 trio_rsfa <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=rsfa_name)) %>% do.call(rbind,.)
@@ -193,8 +220,10 @@ prisma_rsfa <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, fu
 suny_rsfa <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=rsfa_name)) %>% do.call(rbind,.)
 rome_rsfa <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=rsfa_name)) %>% do.call(rbind,.)
 iop_rsfa <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=rsfa_name)) %>% do.call(rbind,.)
+napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=rsfa_name_napls)) %>% do.call(rbind,.)
 
-rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa)
+
+rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
 rsfa_all$INDEX %<>% as.numeric
 
 # read local connectivity
@@ -203,8 +232,9 @@ prisma_netho <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, f
 suny_netho <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=netho_name)) %>% do.call(rbind,.)
 rome_netho <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=netho_name)) %>% do.call(rbind,.)
 iop_netho <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=netho_name)) %>% do.call(rbind,.)
+napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=netho_name_napls)) %>% do.call(rbind,.)
 
-netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho)
+netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
 netho_all$INDEX %<>% as.numeric
 
 # read between parcel fc
@@ -213,10 +243,22 @@ prisma_bparc <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, f
 suny_bparc <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=bparc_name)) %>% do.call(rbind,.)
 rome_bparc <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=bparc_name)) %>% do.call(rbind,.)
 iop_bparc <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=bparc_name)) %>% do.call(rbind,.)
+napls_bparc <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls)) %>% do.call(rbind,.)
 
-bparc_all <- rbind(trio_bparc,prisma_bparc,suny_bparc,rome_bparc,iop_bparc)
-bparc_all$INDEX %<>% as.numeric
+bparc_all <- rbind(trio_bparc,prisma_bparc,suny_bparc,rome_bparc,iop_bparc,napls_bparc)
+#bparc_all$INDEX %<>% as.numeric
 
 ```
 
+save workspace
+```{r paged.print=FALSE}
+# save list of packages
+setwd(project)
+sink("package_versions.txt")
+sessionInfo()
+sink()
+
+# save image
+save.image(file=file.path(project,"demographics/22q_chr_fmri.Rdata"),compress = "bzip2")
+```
 
