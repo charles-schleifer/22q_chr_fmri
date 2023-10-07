@@ -22,12 +22,10 @@ mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla
 # if hoffman directory is empty, use system command and sshfs to mount server, if not empty assume already mounted and skip
 if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
 
-
 # list packages to load
 packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr", "ggplot2","ggpubr","RColorBrewer", "ciftiTools","tableone", "data.table", "reshape2","neuroCombat","pls")
 
 # install packages if not yet installed
-# note: ciftiTools install fails if R is started without enough memory on cluster (try 16G)
 all_packages <- rownames(installed.packages())
 installed_packages <- packages %in% all_packages
 if (any(installed_packages == FALSE)){install.packages(packages[!installed_packages])}
@@ -77,7 +75,6 @@ xii_Ji_parcel <- read_cifti(file.path(project,"CAB-NP/CortexSubcortex_ColeAntice
 xii_Ji_network <- read_cifti(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_netassignments_LR.dscalar.nii"), brainstructures = "all")
 # read only surface parcels
 xii_Ji_parcel_surf <- read_cifti(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR.dscalar.nii"), brainstructures = c("left", "right"))
-
 
 # paths to sessions directories
 trio_dir <- file.path(hoffman,"22q/qunex_studyfolder/sessions")
@@ -172,7 +169,6 @@ percent_udvarsme_suny <- lapply(suny_sessions,function(s) get_percent_udvarsme(s
 percent_udvarsme_iop <- lapply(iop_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=iop_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
 # get NAPLS movement
 percent_udvarsme_napls <- lapply(napls_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=napls_dir,bold_name_use="RESTING")) %>% do.call(rbind,.) %>% as.data.frame
-
 
 # combine
 percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop, percent_udvarsme_napls)
