@@ -222,7 +222,6 @@ rome_rsfa <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s
 iop_rsfa <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=rsfa_name)) %>% do.call(rbind,.)
 napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=rsfa_name_napls)) %>% do.call(rbind,.)
 
-
 rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
 rsfa_all$INDEX %<>% as.numeric
 
@@ -237,16 +236,45 @@ napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="
 netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
 netho_all$INDEX %<>% as.numeric
 
-# read between parcel fc
-trio_bparc <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=bparc_name)) %>% do.call(rbind,.)
-prisma_bparc <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=bparc_name_prisma)) %>% do.call(rbind,.)
-suny_bparc <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=bparc_name)) %>% do.call(rbind,.)
-rome_bparc <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=bparc_name)) %>% do.call(rbind,.)
-iop_bparc <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=bparc_name)) %>% do.call(rbind,.)
-napls_bparc <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls)) %>% do.call(rbind,.)
+# function to convert parcellated fc matrix to global fc by getting the average connectivity for each ROI
+gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r_Fz", key=ji_key){
+  # get unique rois
+  rois <- unique(c(mat[,col1],mat[,col2]))
+  # make df to filter (rename chosen columns to "col1" and "col2" to easily reference in filter command)
+  dat <- mat
+  dat$col1 <- dat[,col1]
+  dat$col2 <- dat[,col2]
+  dat[,variable] %<>% as.numeric
+  # get subject ID and site
+  id <- unique(dat$MRI_S_ID)
+  site <- unique(dat$site)
+  if(length(id)>1){
+    stop("Error: more than one MRI ID in input data")
+  }
+  # make output df with one row per roi
+  out <- data.frame(INDEX=rois)
+  # get mean fc for each roi
+  for(r in rois){
+    rows <- filter(dat, col1==r | col2==r)
+    gbc <- mean(rows[,variable]) 
+    out[which(out$INDEX==r),"GBC"] <- gbc
+  }
+  out <- merge(x=out, y=key, by="INDEX", all.y=TRUE)
+  out$MRI_S_ID <- id
+  out$site <- site
+  return(out)
+}
 
-bparc_all <- rbind(trio_bparc,prisma_bparc,suny_bparc,rome_bparc,iop_bparc,napls_bparc)
-#bparc_all$INDEX %<>% as.numeric
+# read between parcel fc
+trio_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=bparc_name))) %>% do.call(rbind,.)
+prisma_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=bparc_name_prisma))) %>% do.call(rbind,.)
+suny_gbc <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=bparc_name))) %>% do.call(rbind,.)
+rome_gbc <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=bparc_name))) %>% do.call(rbind,.)
+iop_gbc <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=bparc_name))) %>% do.call(rbind,.)
+napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls))) %>% do.call(rbind,.)
+
+gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
+gbc_all$INDEX %<>% as.numeric
 
 ```
 
