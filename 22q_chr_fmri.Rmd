@@ -274,15 +274,38 @@ gbc_all$INDEX %<>% as.numeric
 
 ```
 
-save workspace
+save workspace with initial data
 ```{r paged.print=FALSE}
-# save list of packages
-setwd(project)
-sink("package_versions.txt")
-sessionInfo()
-sink()
-
-# save image
-save.image(file=file.path(project,"demographics/22q_chr_fmri.Rdata"),compress = "bzip2")
+# # save list of packages
+# setwd(project)
+# sink("package_versions.txt")
+# sessionInfo()
+# sink()
+# 
+# # save image
+# save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
 ```
+
+load data (instead of loading individual files from hoffman)
+```{r}
+load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
+```
+
+harmonize sites with neurocombat
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
