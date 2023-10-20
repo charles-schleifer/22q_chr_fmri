@@ -477,7 +477,36 @@ gbc_norm <- hc_normalize(df=gbc_combat, hcs_ids=hc_ids)
 
 ```
 
+plot pre/post combat
+```{r}
+# function to plot pre and post combat
+plot_combat <- function(df, raw_col){
+  # get mean of all parcels per subject pre/post combat to look at distributions
+  subs <- df$MRI_S_ID
+  precombat <- lapply(subs, function(s) mean(data.frame(filter(df, MRI_S_ID==s))[,raw_col])) %>% do.call(rbind,.)
+  postcombat <- lapply(subs, function(s) mean(data.frame(filter(df, MRI_S_ID==s))$value)) %>% do.call(rbind,.)
+  parc_means <- data.frame(MRI_S_ID=subs, postcombat=as.vector(postcombat), precombat=as.vector(precombat))
+  parc_means_demo <- merge(x=parc_means, y=df, by="MRI_S_ID", all.x=TRUE, all.y=FALSE)
+  parc_means_demo$Site %<>% as.factor
+  # plot meean RSFA distributions by site pre combat
+  pl_precombat <- ggplot(parc_means_demo, aes(precombat, fill=Site, y=..count..))+
+    geom_density(kernel="gaussian", alpha=0.7)+
+    #scale_fill_manual(values=c("lightblue","red"))+
+    theme_classic()+
+    ggtitle("pre-combat")
+  
+  # plot meean RSFA distributions by site post combat
+  pl_postcombat <- ggplot(parc_means_demo, aes(postcombat, fill=Site, y=..count..))+
+    geom_density(kernel="gaussian", alpha=0.7)+
+    #scale_fill_manual(values=c("lightblue","red"))+
+    theme_classic()+
+    ggtitle("post-combat")
+  
+  ggarrange(pl_precombat,pl_postcombat, nrow=1, common.legend=T,legend="right")
+}
 
+combat_plot_rsfa <- plot_combat(df=rsfa_norm, raw_col="t_sd")
+```
 
 
 
