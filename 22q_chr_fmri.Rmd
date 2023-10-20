@@ -403,6 +403,9 @@ run_neurocombat <- function(input,
                             index_col="INDEX", 
                             id_col="MRI_S_ID", 
                             demo=demo_22q_napls){
+  # remove site column from input and replace with demo
+  input <- subset(input, select=-site)
+  input <- merge(x=input, y=demo[,c("MRI_S_ID","Site")], by="MRI_S_ID", all.x=TRUE)
   # cast to wide so that rows are parcel indices and columns are MRI_S_IDs
   data.table::setDT(input)
   input_subcols <- reshape2::dcast(data=input, formula=formula, value.var=var_column) 
@@ -426,9 +429,8 @@ run_neurocombat <- function(input,
   combat_d$INDEX <- rownames(combat_d)
   combat_d$INDEX %<>% as.numeric
   combat_l <- melt.data.table(combat_d, id.vars="INDEX") %>% rename("MRI_S_ID"="variable")
-
-  # merge with demographics
-  out <- merge(x=input, y=combat_l, by=c("INDEX", "MRI_S_ID"), all.x=TRUE)
+  # merge with input data
+  out <- merge(x=input, y=combat_l, by=c("INDEX", "MRI_S_ID"), all.x=TRUE, all.y=TRUE)
   return(out)
 }
 
@@ -472,7 +474,7 @@ hc_ids <- filter(demo_22q_napls, Group=="CONTROL")$MRI_S_ID
 
 # normalize each measure
 rsfa_norm <- hc_normalize(df=rsfa_combat, hcs_ids=hc_ids)
-netho_norm <- hc_normalize(df=netho_combat, hcs_ids=hc_ids)
+#netho_norm <- hc_normalize(df=netho_combat, hcs_ids=hc_ids)
 gbc_norm <- hc_normalize(df=gbc_combat, hcs_ids=hc_ids)
 
 ```
@@ -482,31 +484,71 @@ plot pre/post combat
 # function to plot pre and post combat
 plot_combat <- function(df, raw_col){
   # get mean of all parcels per subject pre/post combat to look at distributions
-  subs <- df$MRI_S_ID
+  subs <- sort(unique(df$MRI_S_ID))
   sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
   precombat <- lapply(sublist, function(s) mean(s[,raw_col])) %>% do.call(rbind,.)
   postcombat <- lapply(sublist, function(s) mean(s$value)) %>% do.call(rbind,.)
   parc_means <- data.frame(MRI_S_ID=subs, postcombat=as.vector(postcombat), precombat=as.vector(precombat))
-  parc_means_demo <- merge(x=parc_means, y=df, by="MRI_S_ID", all.x=TRUE, all.y=FALSE)
+  # add site
+  df$duplicated <- duplicated(df$MRI_S_ID)
+  dup <- filter(df, duplicated==FALSE)[,c("MRI_S_ID","Site")]
+  parc_means_demo <- merge(x=parc_means, y=dup, by="MRI_S_ID")
   parc_means_demo$Site %<>% as.factor
+  print(nrow(parc_means))
+  print(nrow(parc_means_demo))
   # plot meean RSFA distributions by site pre combat
-  pl_precombat <- ggplot(parc_means_demo, aes(precombat, fill=Site, y=..count..))+
-    geom_density(kernel="gaussian", alpha=0.7)+
-    #scale_fill_manual(values=c("lightblue","red"))+
+  pl_precombat <- ggplot(parc_means_demo, aes(precombat, fill=Site, after_stat(count)))+
+    geom_density(kernel="gaussian", alpha=0.5)+
+    #scale_fill_manual(values=rainbow(13))+
     theme_classic()+
-    ggtitle("pre-combat")
+    ggtitle(paste("pre-combat",raw_col))
   
   # plot meean RSFA distributions by site post combat
-  pl_postcombat <- ggplot(parc_means_demo, aes(postcombat, fill=Site, y=..count..))+
-    geom_density(kernel="gaussian", alpha=0.7)+
-    #scale_fill_manual(values=c("lightblue","red"))+
+  pl_postcombat <- ggplot(parc_means_demo, aes(postcombat, fill=Site, after_stat(count)))+
+    geom_density(kernel="gaussian", alpha=0.5)+ 
+    #scale_fill_manual(values=rainbow(13))+
     theme_classic()+
-    ggtitle("post-combat")
+    ggtitle(paste("post-combat",raw_col))
   
   ggarrange(pl_precombat,pl_postcombat, nrow=1, common.legend=T,legend="right")
 }
 
+
+plot_normed <- function(df, name){
+  # get mean of all parcels per subject pre/post combat to look at distributions
+  subs <- sort(unique(df$MRI_S_ID))
+  sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
+  values <- lapply(sublist, function(s) mean(s$value_normed)) %>% do.call(rbind,.)
+  normed <- data.frame(MRI_S_ID=subs, normed=as.vector(values))
+  # add site
+  df$duplicated <- duplicated(df$MRI_S_ID)
+  dup <- filter(df, duplicated==FALSE)[,c("MRI_S_ID","Site")]
+  normed_demo <- merge(x=normed, y=dup, by="MRI_S_ID")
+  normed_demo$Site %<>% as.factor
+  print(nrow(normed_demo))
+  print(nrow(normed_demo))
+  # plot meean RSFA distributions by site post combat
+  pl_postcombat <- ggplot(normed_demo, aes(normed, fill=Site, after_stat(count)))+
+  geom_density(kernel="gaussian", alpha=0.5)+ 
+  #scale_fill_manual(values=rainbow(13))+
+  theme_classic()+
+  ggtitle(paste(name,"normed"))
+  return(pl_postcombat)
+}
+
+norm_plot_rsfa <- plot_normed(rsfa_norm, name="rsfa")
+norm_plot_rsfa
+
+norm_plot_gbc <- plot_normed(gbc_norm, name="gbc")
+norm_plot_gbc
+
 combat_plot_rsfa <- plot_combat(df=rsfa_norm, raw_col="t_sd")
+combat_plot_rsfa
+
+combat_plot_gbc <- plot_combat(df=gbc_norm, raw_col="GBC")
+combat_plot_gbc
+
+
 ```
 
 
