@@ -300,7 +300,6 @@ gbc_all$INDEX %<>% as.numeric
 ```
 
 TO DO: multiple things to fix in input data
-02_S0077_00 GBC is NA for all parcels
 NetHo data has NAs as well as inf values
 - NA in all "Frontoparietal-29_R-Cerebellum" and "Visual1-04_R-Accumbens" --> check size?
 - several subjects have multiple NA (those excluded for short BOLDs marked with *):
@@ -315,6 +314,7 @@ NetHo data has NAs as well as inf values
   - 02_S0077_00 (11) *
   - 08_S0057_00 (141) *
   - 08_S0081_00 (130) *
+02_S0077_00 GBC is NA for all parcels *
   
   
 
@@ -328,6 +328,52 @@ sink()
 
 # save image
 save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
+```
+
+reload NAPLS data and save
+```{r}
+napls_sessions <- list.files(napls_dir,pattern="_00$")
+napls_sessions <- napls_sessions[! napls_sessions %in% exclude_sessions]
+all_sessions <- c(trio_sessions,prisma_sessions,suny_sessions,rome_sessions,iop_sessions, napls_sessions)
+
+demo_napls=data.frame(MRI_S_ID=demo_napls_id$MRI_S_ID,
+                      Group=demo_napls_id$SubjectType,
+                      AGE=demo_napls_id$demo_age_ym,
+                      SEX=demo_napls_id$demo_sex,
+                      Site=demo_napls_id$SiteNumber)
+demo_napls$Site <- paste0("NAPLS",demo_napls$Site)
+demo_napls$SEX <-  factor(demo_napls$SEX,levels=c(1,2),labels=c("M","F"))
+demo_napls$Group <- factor(demo_napls$Group,levels=c("Prodromal","Control"),labels=c("CHR","CONTROL"))
+demo_22q=data.frame(MRI_S_ID=demo_multisite_bl$MRI_S_ID,
+                      Group=demo_multisite_bl$SUBJECT_IDENTITY,
+                      AGE=demo_multisite_bl$AGE,
+                      SEX=demo_multisite_bl$SEX,
+                      Site=demo_multisite_bl$Site)
+demo_22q$SEX <-  factor(demo_22q$SEX,levels=c("M","F"),labels=c("M","F"))
+demo_22q$Group <- factor(demo_22q$Group,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
+demo_22q_napls <- rbind(demo_22q, demo_napls)
+demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
+
+percent_udvarsme_napls <- lapply(napls_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=napls_dir,bold_name_use="RESTING")) %>% do.call(rbind,.) %>% as.data.frame
+percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop, percent_udvarsme_napls)
+percent_udvarsme_all$percent_udvarsme <- as.numeric(percent_udvarsme_all$percent_udvarsme)
+percent_udvarsme_all$percent_use <- as.numeric(percent_udvarsme_all$percent_use)
+percent_udvarsme_all$MRI_S_ID <- percent_udvarsme_all$sesh
+demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+
+napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=rsfa_name_napls)) %>% do.call(rbind,.)
+rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
+rsfa_all$INDEX %<>% as.numeric
+
+napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=netho_name_napls)) %>% do.call(rbind,.)
+netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
+netho_all$INDEX %<>% as.numeric
+
+napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls))) %>% do.call(rbind,.)
+gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
+gbc_all$INDEX %<>% as.numeric
+save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
+
 ```
 
 load data (instead of loading individual files from hoffman)
