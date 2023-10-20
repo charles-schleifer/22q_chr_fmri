@@ -483,8 +483,9 @@ plot pre/post combat
 plot_combat <- function(df, raw_col){
   # get mean of all parcels per subject pre/post combat to look at distributions
   subs <- df$MRI_S_ID
-  precombat <- lapply(subs, function(s) mean(data.frame(filter(df, MRI_S_ID==s))[,raw_col])) %>% do.call(rbind,.)
-  postcombat <- lapply(subs, function(s) mean(data.frame(filter(df, MRI_S_ID==s))$value)) %>% do.call(rbind,.)
+  sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
+  precombat <- lapply(sublist, function(s) mean(s[,raw_col])) %>% do.call(rbind,.)
+  postcombat <- lapply(sublist, function(s) mean(s$value)) %>% do.call(rbind,.)
   parc_means <- data.frame(MRI_S_ID=subs, postcombat=as.vector(postcombat), precombat=as.vector(precombat))
   parc_means_demo <- merge(x=parc_means, y=df, by="MRI_S_ID", all.x=TRUE, all.y=FALSE)
   parc_means_demo$Site %<>% as.factor
