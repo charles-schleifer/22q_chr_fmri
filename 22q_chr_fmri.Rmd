@@ -128,17 +128,21 @@ demo_napls_id <- merge(x=demo_napls_bl, y=napls_id_match, by=c("SiteNumber","Sub
 # make df with basic demographics across all 22q and NAPLS
 # first add napls data
 demo_napls=data.frame(MRI_S_ID=demo_napls_id$MRI_S_ID,
+                      Group=demo_napls_id$SubjectType,
                       AGE=demo_napls_id$demo_age_ym,
                       SEX=demo_napls_id$demo_sex,
                       Site=demo_napls_id$SiteNumber)
 demo_napls$Site <- paste0("NAPLS",demo_napls$Site)
 demo_napls$SEX <-  factor(demo_napls$SEX,levels=c(1,2),labels=c("M","F"))
+demo_napls$Group <- factor(demo_napls$Group,levels=c("Prodromal","Control"),labels=c("CHR","CONTROL"))
 # then add 22q data
 demo_22q=data.frame(MRI_S_ID=demo_multisite_bl$MRI_S_ID,
+                      Group=demo_multisite_bl$SUBJECT_IDENTITY,
                       AGE=demo_multisite_bl$AGE,
                       SEX=demo_multisite_bl$SEX,
                       Site=demo_multisite_bl$Site)
 demo_22q$SEX <-  factor(demo_22q$SEX,levels=c("M","F"),labels=c("M","F"))
+demo_22q$Group <- factor(demo_22q$Group,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
 # combine
 demo_22q_napls <- rbind(demo_22q, demo_napls)
 # get age squared column for regression
@@ -295,6 +299,25 @@ gbc_all$INDEX %<>% as.numeric
 
 ```
 
+TO DO: multiple things to fix in input data
+02_S0077_00 GBC is NA for all parcels
+NetHo data has NAs as well as inf values
+- NA in all "Frontoparietal-29_R-Cerebellum" and "Visual1-04_R-Accumbens" --> check size?
+- several subjects have multiple NA:
+  - 02_S0077_00 (700)
+  - 08_S0081_00 (362)
+  - 01_S0074_00 (166)
+  - 08_S0057_00 (11)
+  - 02_S0013_00 (5)
+  - 03_S0122_00 (5)
+- several subjects have infinite NetHo values for multiple parcels, and all overlap with cases with multiple NAs
+  - 01_S0074_00 (157)
+  - 02_S0077_00 (11)
+  - 08_S0057_00 (141)
+  - 08_S0081_00 (130)
+  
+  
+
 save workspace with initial data
 ```{r paged.print=FALSE}
 # save list of packages
@@ -318,45 +341,84 @@ need to harmonize separately for each measure (rsfa, local connectivity, global 
 # function to run neurocombat (includes study defaults)
 run_neurocombat <- function(input, 
                             var_column, 
-                            site_column="site",
+                            site_column="Site",
                             formula="INDEX ~ MRI_S_ID",
-                            covars=c("MRI_S_ID","AGE","AGE2","SEX","Site","percent_udvarsme"), 
+                            covars=c("Group","AGE","AGE2","SEX","percent_udvarsme"),
+                            model="~Group + AGE + AGE2 + SEX + percent_udvarsme",
                             index_col="INDEX", 
                             id_col="MRI_S_ID", 
                             demo=demo_22q_napls){
   # cast to wide so that rows are parcel indices and columns are MRI_S_IDs
   data.table::setDT(input)
   input_subcols <- reshape2::dcast(data=input, formula=formula, value.var=var_column) 
-
   # get subject ids in order of columns
   subcols <- which(names(input_subcols)!= index_col)
   subnames <- names(input_subcols)[subcols]
-  
-  # get covariates from multisite baseline demo df, ordered the same as subject ID columns for input to neurocombat
-  covardf <- merge(x=data.frame(subnames), y=demo[,covars], by.x="subnames", by.y=id_col, all.x=TRUE)
+
+    # get covariates from multisite baseline demo df, ordered the same as subject ID columns for input to neurocombat
+  covardf <- merge(x=data.frame(subnames), y=demo[,c(covars,site_column,id_col)], by.x="subnames", by.y=id_col, all.x=TRUE)
   
   # run neurocombat for parcellated RSFA with site as batch variable and AGE and SEX included in the model
   # using default parametric model (this paper shows parametric prior estimates outperform non-parametric in neurocombat: https://www.sciencedirect.com/science/article/pii/S2666956022000605)
-  model_matrix <- model.matrix(~covardf$AGE + covardf$SEX + covardf$percent_udvarsme)
-  combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf$Site, mod=model_matrix, parametric=TRUE, eb=TRUE)
+  #model_matrix <- model.matrix(~covardf$AGE + covardf$AGE2 + covardf$SEX + covardf$percent_udvarsme)
+  model_matrix <- model.matrix(formula(model),data=covardf[covars])
+  #print(summary(as.factor(covardf[,site_column])))
+  print(input_subcols)
+  combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf[,site_column], mod=model_matrix, parametric=TRUE, eb=TRUE)
   
   # convert combat results  back to long df
   combat_d <- combat$dat.combat %>% as.data.frame
   data.table::setDT(combat_d)
-  combat_d[,index_col] <- rownames(combat_d)
-  combat_d[,index_col] %<>% as.numeric
-  combat_l <- melt.data.table(combat_d, id.vars=index_col) %>% rename(id_col="variable")
-  
+  combat_d$INDEX <- rownames(combat_d)
+  combat_d$INDEX %<>% as.numeric
+  combat_l <- melt.data.table(combat_d, id.vars="INDEX") %>% rename("MRI_S_ID"="variable")
+
   # merge with demographics
-  out <- merge(x=input, y=combat_l, by=c(index_col, id_col), all.x=TRUE)
+  out <- merge(x=input, y=combat_l, by=c("INDEX", "MRI_S_ID"), all.x=TRUE)
   return(out)
 }
 
-test <- run_neurocombat(input=gbc_all, var_column="GBC")
+# run combat
+rsfa_combat <- run_neurocombat(input=rsfa_all, var_column="t_sd")
+netho_combat <- run_neurocombat(input=netho_all, var_column="NetHo")
+gbc_combat <- run_neurocombat(input=gbc_all, var_column="GBC")
 
 ```
 
+normalize based on control group
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# function to get mean and standard dev of hcs for a given parcel to use for normalization
+# takes as input, a long data frame e.g. gbc_combat, vectors of control IDs, and the desired parcel index 
+get_hc_stats <- function(df, hcs_ids, parc){
+  dfh <- filter(df, MRI_S_ID %in% hcs_ids & INDEX == parc)
+  m <- mean(as.numeric(dfh$value))
+  s <- sd(as.numeric(dfh$value))
+  out <- data.frame(parcel_hc_mean=m, parcel_hc_sd=s)
+  return(out)
+}
 
+# function to normalize based on hc mean and sd
+hc_normalize <- function(df, hcs_ids){
+  # first get hc stats for all parcels
+  inds <- unique(df$INDEX)
+  hc_stats <- lapply(inds, function(p) get_hc_stats(parc=p, df=df, hcs_ids=hcs_ids)) %>% do.call(rbind,.)
+  hc_stats$INDEX <- inds
+  # then merge parcel norms with full df
+  dfn <- merge(x=df, y=hc_stats, by="INDEX", all.x=TRUE)
+  # normalize data in each parcel based on control mean and sd for that parcel
+  dfn$value_normed <- (dfn$value - dfn$parcel_hc_mean)/dfn$parcel_hc_sd
+  return(dfn)
+}
+
+# get list of all controls
+hc_ids <- filter(demo_22q_napls, Group=="CONTROL")$MRI_S_ID
+
+# normalize each measure
+rsfa_norm <- hc_normalize(df=rsfa_combat, hcs_ids=hc_ids)
+netho_norm <- hc_normalize(df=netho_combat, hcs_ids=hc_ids)
+gbc_norm <- hc_normalize(df=gbc_combat, hcs_ids=hc_ids)
+
+```
 
 
 
