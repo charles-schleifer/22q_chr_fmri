@@ -99,7 +99,7 @@ iop_sessions <- list.files(iop_dir,pattern="GQAIMS[0-9]")
 rome_sessions <- c(list.files(rome_dir, pattern="C[0-9]"),list.files(rome_dir, pattern="D[0-9]"))
 #napls_sessions <- list.files(napls_dir,pattern="[0-9]_")
 # get only baseline napls
-napls_sessions <- list.files(napls_dir,pattern="[0-9]_*00")
+napls_sessions <- list.files(napls_dir,pattern="_00$")
 napls_sessions <- napls_sessions[! napls_sessions %in% exclude_sessions]
 
 all_sessions <- c(trio_sessions,prisma_sessions,suny_sessions,rome_sessions,iop_sessions, napls_sessions)
@@ -198,6 +198,7 @@ percent_udvarsme_all$MRI_S_ID <- percent_udvarsme_all$sesh
 
 # add movement to demo bl
 demo_multisite_bl <- merge(x=demo_multisite_bl, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
 ```
 
 load fMRI data
@@ -312,9 +313,38 @@ load data (instead of loading individual files from hoffman)
 ```
 
 harmonize sites with neurocombat
+need to harmonize separately for each measure (rsfa, local connectivity, global connectivity)
 ```{r}
-# add movement to demo df
+# function to run neurocombat (includes study defaults)
+run_neurocombat <- function(input, 
+                            var_column, 
+                            site_column="site",
+                            formula="INDEX ~ MRI_S_ID",
+                            covars=c("MRI_S_ID","AGE","AGE2","SEX","Site","percent_udvarsme"), 
+                            index_col="INDEX", 
+                            id_col="MRI_S_ID", 
+                            demo=demo_22q_napls){
+  # cast to wide so that rows are parcel indices and columns are MRI_S_IDs
+  data.table::setDT(input)
+  input_subcols <- reshape2::dcast(data=input, formula=formula, value.var=var_column) 
 
+  # get subject ids in order of columns
+  subcols <- which(names(input_subcols)!= index_col)
+  subnames <- names(input_subcols)[subcols]
+  
+  print(subnames)
+  
+  # get covariates from multisite baseline demo df, ordered the same as subject ID columns for input to neurocombat
+  covardf <- merge(x=data.frame(subnames), y=demo[,covars], by.x="subnames", by.y=id_col, all.x=TRUE)
+  return(combat_covars_ordered)
+  # run neurocombat for parcellated RSFA with site as batch variable and AGE and SEX included in the model
+  # using default parametric model (this paper shows parametric prior estimates outperform non-parametric in neurocombat: https://www.sciencedirect.com/science/article/pii/S2666956022000605)
+  out_combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf$Site, mod=model.matrix(~covardf$AGE + covardf$SEX + covardf$percent_udvarsme), parametric=TRUE)
+
+  
+}
+
+test <- run_neurocombat(input=gbc_all, var_column="GBC")
 ```
 
 
