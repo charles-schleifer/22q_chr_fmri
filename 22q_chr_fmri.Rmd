@@ -303,18 +303,18 @@ TO DO: multiple things to fix in input data
 02_S0077_00 GBC is NA for all parcels
 NetHo data has NAs as well as inf values
 - NA in all "Frontoparietal-29_R-Cerebellum" and "Visual1-04_R-Accumbens" --> check size?
-- several subjects have multiple NA:
-  - 02_S0077_00 (700)
-  - 08_S0081_00 (362)
-  - 01_S0074_00 (166)
-  - 08_S0057_00 (11)
+- several subjects have multiple NA (those excluded for short BOLDs marked with *):
+  - 02_S0077_00 (700) *
+  - 08_S0081_00 (362) *
+  - 01_S0074_00 (166) *
+  - 08_S0057_00 (11) *
   - 02_S0013_00 (5)
   - 03_S0122_00 (5)
 - several subjects have infinite NetHo values for multiple parcels, and all overlap with cases with multiple NAs
-  - 01_S0074_00 (157)
-  - 02_S0077_00 (11)
-  - 08_S0057_00 (141)
-  - 08_S0081_00 (130)
+  - 01_S0074_00 (157) *
+  - 02_S0077_00 (11) *
+  - 08_S0057_00 (141) *
+  - 08_S0081_00 (130) *
   
   
 
