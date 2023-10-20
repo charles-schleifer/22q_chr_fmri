@@ -245,6 +245,8 @@ napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="N
 
 rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
 rsfa_all$INDEX %<>% as.numeric
+rsfa_all$t_sd %<>% as.numeric
+rsfa_all$t_mean %<>% as.numeric
 
 # read local connectivity
 trio_netho <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=netho_name)) %>% do.call(rbind,.)
@@ -256,6 +258,7 @@ napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="
 
 netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
 netho_all$INDEX %<>% as.numeric
+netho_all$NetHo %<>% as.numeric
 
 # function to convert parcellated fc matrix to global fc by getting the average connectivity for each ROI
 gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r_Fz", key=ji_key){
@@ -296,6 +299,7 @@ napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_res
 
 gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
 gbc_all$INDEX %<>% as.numeric
+gbc_all$GBC %<>% as.numeric
 
 ```
 
@@ -364,14 +368,19 @@ demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","
 napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=rsfa_name_napls)) %>% do.call(rbind,.)
 rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
 rsfa_all$INDEX %<>% as.numeric
+rsfa_all$t_sd %<>% as.numeric
+rsfa_all$t_mean %<>% as.numeric
 
 napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=netho_name_napls)) %>% do.call(rbind,.)
 netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
 netho_all$INDEX %<>% as.numeric
+netho_all$NetHo %<>% as.numeric
 
 napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls))) %>% do.call(rbind,.)
 gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
 gbc_all$INDEX %<>% as.numeric
+gbc_all$GBC %<>% as.numeric
+
 save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
 
 ```
