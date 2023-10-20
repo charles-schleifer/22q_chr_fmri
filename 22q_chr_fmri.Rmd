@@ -314,7 +314,7 @@ load data (instead of loading individual files from hoffman)
 
 harmonize sites with neurocombat
 need to harmonize separately for each measure (rsfa, local connectivity, global connectivity)
-```{r}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to run neurocombat (includes study defaults)
 run_neurocombat <- function(input, 
                             var_column, 
@@ -332,19 +332,28 @@ run_neurocombat <- function(input,
   subcols <- which(names(input_subcols)!= index_col)
   subnames <- names(input_subcols)[subcols]
   
-  print(subnames)
-  
   # get covariates from multisite baseline demo df, ordered the same as subject ID columns for input to neurocombat
   covardf <- merge(x=data.frame(subnames), y=demo[,covars], by.x="subnames", by.y=id_col, all.x=TRUE)
-  return(combat_covars_ordered)
+  
   # run neurocombat for parcellated RSFA with site as batch variable and AGE and SEX included in the model
   # using default parametric model (this paper shows parametric prior estimates outperform non-parametric in neurocombat: https://www.sciencedirect.com/science/article/pii/S2666956022000605)
-  out_combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf$Site, mod=model.matrix(~covardf$AGE + covardf$SEX + covardf$percent_udvarsme), parametric=TRUE)
-
+  model_matrix <- model.matrix(~covardf$AGE + covardf$SEX + covardf$percent_udvarsme)
+  combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf$Site, mod=model_matrix, parametric=TRUE, eb=TRUE)
   
+  # convert combat results  back to long df
+  combat_d <- combat$dat.combat %>% as.data.frame
+  data.table::setDT(combat_d)
+  combat_d[,index_col] <- rownames(combat_d)
+  combat_d[,index_col] %<>% as.numeric
+  combat_l <- melt.data.table(combat_d, id.vars=index_col) %>% rename(id_col="variable")
+  
+  # merge with demographics
+  out <- merge(x=input, y=combat_l, by=c(index_col, id_col), all.x=TRUE)
+  return(out)
 }
 
 test <- run_neurocombat(input=gbc_all, var_column="GBC")
+
 ```
 
 
