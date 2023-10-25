@@ -420,6 +420,8 @@ run_neurocombat <- function(input,
   # remove site column from input and replace with demo
   input <- subset(input, select=-site)
   input <- merge(x=input, y=demo[,c("MRI_S_ID","Site")], by="MRI_S_ID", all.x=TRUE)
+  # get list of indices
+  indices <- unique(input$INDEX)
   # cast to wide so that rows are parcel indices and columns are MRI_S_IDs
   data.table::setDT(input)
   input_subcols <- reshape2::dcast(data=input, formula=formula, value.var=var_column) 
@@ -435,12 +437,12 @@ run_neurocombat <- function(input,
   #model_matrix <- model.matrix(~covardf$AGE + covardf$AGE2 + covardf$SEX + covardf$percent_udvarsme)
   model_matrix <- model.matrix(formula(model),data=covardf[covars])
   #print(summary(as.factor(covardf[,site_column])))
-  combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf[,site_column], mod=model_matrix, parametric=TRUE, eb=TRUE)
+  combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf[,site_column], mod=model_matrix, parametric=TRUE, eb=TRUE, verbose=FALSE)
   
   # convert combat results  back to long df
   combat_d <- combat$dat.combat %>% as.data.frame
   data.table::setDT(combat_d)
-  combat_d$INDEX <- rownames(combat_d)
+  combat_d$INDEX <- indices
   combat_d$INDEX %<>% as.numeric
   combat_l <- melt.data.table(combat_d, id.vars="INDEX") %>% rename("MRI_S_ID"="variable")
   # merge with input data
@@ -453,7 +455,7 @@ run_neurocombat <- function(input,
 # run combat
 rsfa_combat <- run_neurocombat(input=rsfa_all, var_column="t_sd")
 # TODO: netho failing because of NAs
-#netho_combat <- run_neurocombat(input=netho_all, var_column="NetHo")
+netho_combat <- run_neurocombat(input=netho_no_na, var_column="NetHo")
 gbc_combat <- run_neurocombat(input=gbc_all, var_column="GBC")
 
 ```
@@ -488,7 +490,7 @@ hc_ids <- filter(demo_22q_napls, Group=="CONTROL")$MRI_S_ID
 
 # normalize each measure
 rsfa_norm <- hc_normalize(df=rsfa_combat, hcs_ids=hc_ids)
-#netho_norm <- hc_normalize(df=netho_combat, hcs_ids=hc_ids)
+netho_norm <- hc_normalize(df=netho_combat, hcs_ids=hc_ids)
 gbc_norm <- hc_normalize(df=gbc_combat, hcs_ids=hc_ids)
 
 ```
