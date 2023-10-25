@@ -555,11 +555,17 @@ plot_normed <- function(df, name){
 norm_plot_rsfa <- plot_normed(rsfa_norm, name="rsfa")
 norm_plot_rsfa
 
+norm_plot_netho <- plot_normed(netho_norm, name="NetHo")
+norm_plot_netho
+
 norm_plot_gbc <- plot_normed(gbc_norm, name="gbc")
 norm_plot_gbc
 
 combat_plot_rsfa <- plot_combat(df=rsfa_norm, raw_col="t_sd")
 combat_plot_rsfa
+
+combat_plot_netho <- plot_combat(df=netho_norm, raw_col="NetHo")
+combat_plot_netho
 
 combat_plot_gbc <- plot_combat(df=gbc_norm, raw_col="GBC")
 combat_plot_gbc
