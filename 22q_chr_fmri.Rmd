@@ -329,6 +329,11 @@ r2 <- filter(ji_key, LABEL=="Visual1-04_R-Accumbens")$INDEX
 #
 which(xii_Ji_parcel$data$subcort==r1)
 which(xii_Ji_parcel$data$subcort==r2)
+# both ROIs assigned NA in NetHo analysis have one single voxel and thus can not calculate NetHo
+# need to remove NA rows without disrupting 
+
+# filter NAs from NetHo
+netho_no_na <- filter(netho_all, !is.na(NetHo))
 ```
   
 save workspace with initial data
