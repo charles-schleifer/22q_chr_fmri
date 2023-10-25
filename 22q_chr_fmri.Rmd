@@ -320,7 +320,16 @@ NetHo data initially had NAs as well as inf values
   - 08_S0057_00 (141) *
   - 08_S0081_00 (130) *
 02_S0077_00 GBC is NA for all parcels *
-  
+
+get info about netho NA parcels
+```{r}
+# ged indices
+r1 <- filter(ji_key, LABEL=="Frontoparietal-29_R-Cerebellum")$INDEX
+r2 <- filter(ji_key, LABEL=="Visual1-04_R-Accumbens")$INDEX
+#
+which(xii_Ji_parcel$data$subcort==r1)
+which(xii_Ji_parcel$data$subcort==r2)
+```
   
 save workspace with initial data
 ```{r paged.print=FALSE}
