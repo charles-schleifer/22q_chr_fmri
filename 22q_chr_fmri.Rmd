@@ -603,31 +603,62 @@ gbc_wide <- rows_to_cols(results=gbc_norm, demo=demo_22q_napls)
 
 test linear models for 22q vs TD and CHR vs TD separately
 ```{r}
-# function to return beta coefficient for group in a lm predicting MRI from group plus covariates
-#lm_parcel_group_covars <- function(df,var){
-#  lm(reformulate("SUBJECT_IDENTITY + AGE + SEX", response=var),data=df)$coefficients["SUBJECT_IDENTITYPATIENT-DEL"]
-#}
-lm_parcel_group_covars <- function(df,var,predictors){
-  lm(reformulate(response=var),data=df)
+# function to return beta coefficient for group in a lm predicting MRI from chosen predictors
+lm_parcel_group_covars <- function(df,var,predictors,groups,groupcol,refgroup){
+  # create formula with var on left side and predictors string on right
+  form <- reformulate(predictors,response=var)
+  #print(form)
+  # test linear model
+  lm <- lm(formula=form,data=df, na.action="na.omit")
+  slm <- summary(lm)
+  # get stats for main effect of group
+  g <- groups[which(groups != refgroup)]
+  gname <- paste0(groupcol,g)
+  g_stats <- slm$coefficients[gname,]
+  return(g_stats)
 }
 
-# function to apply lm at each parcel, expects list object output from rows_to_cols, default formula set in function but different predictors can be specified
-get_parcel_group_lm <- function(list, predictors="Group + AGE + AGE2 + SEX + Site + percent_udvarsme"){
-  df <- list$df
+# function to apply lm at each parcel, expects list object output from rows_to_cols
+# defaults, including formula predictors, are set in function but different values can be specified
+# groups should be a vector specifying which groups should be ussed
+get_parcel_group_lm <- function(list, 
+                                groups, 
+                                groupcol="Group", 
+                                refgroup="CONTROL", 
+                                predictors="Group + AGE + AGE2 + SEX + Site + percent_udvarsme", 
+                                alpha=0.05, 
+                                roi_key=ji_key,
+                                prefix="r_"){
+  if(length(groups)!=2){ stop("Error: number of groups not equal to 2")}
+  # filter by specified groups and relevel factor
+  df_all <- as.data.frame(list$df)
+  df_all$groupcol <- df_all[,groupcol]
+  df <- filter(df_all, groupcol %in% groups)
+  df[,groupcol] <- relevel(df[,groupcol], ref=refgroup)
+  # do linear model for every parcel, FDR correct p-values, and create column of betas set to NA when not FDR significant
   parc_cols <- list$parcels
-  lapply(parc_cols, function(v) lm_parcel_group_covars(var=v, df=df, predictors=predictors))
+  stats <- lapply(parc_cols, function(v) lm_parcel_group_covars(var=v, df=df, predictors=predictors, groups=groups, groupcol=groupcol, refgroup=refgroup)) %>% do.call(rbind,.) %>% as.data.frame
+  colnames(stats) <- c("beta","se","t","p")
+  stats$FDR_q <- p.adjust(stats$p, method="fdr")
+  stats$FDR_sig <- stats$FDR_q < alpha
+  stats$beta_FDR <- stats$beta
+  stats$beta_FDR[which(stats$FDR_sig != TRUE)] <- NA
+  # add index column and merge with roi key (assumes column named INDEX in roi_key)
+  stats$indexcol <- parc_cols
+  stats$INDEX <- gsub(prefix,"",stats$indexcol)
+  out <- merge(x=roi_key, y=stats, by="INDEX", all.x=TRUE, all.y=TRUE)
+  return(out)
 }
-#get_parcel_group_b_lm <- function(df,parc_cols){
-#  lapply(parc_cols, function(v) lm_parcel_group_covars(var=v, df=df)$coefficients["SUBJECT_IDENTITYPATIENT-DEL"]) 
-#}
 
-# get group difference effect size for normalized t_sd in each parcel
-#rsfa_group_betas <- get_parcel_group_b_lm(df=df_demo_table_full_mri, parc_cols=parc_cols)%>% do.call(rbind,.) %>% as.data.frame
-rsfa_group_lms <- get_parcel_group_lm(df=df_demo_table_full_mri, parc_cols=parc_cols)
-rsfa_group_betas <- lapply(rsfa_group_lms, function(m)m$coefficients["SUBJECT_IDENTITYPATIENT-DEL"]) %>% do.call(rbind,.) %>% as.vector
-rsfa_group_ts <- lapply(rsfa_group_lms, function(m) summary(m)$coefficients["SUBJECT_IDENTITYPATIENT-DEL","t value"]) %>% do.call(rbind,.) %>% as.vector
-rsfa_group_ps <- lapply(rsfa_group_lms, function(m) summary(m)$coefficients["SUBJECT_IDENTITYPATIENT-DEL","Pr(>|t|)"]) %>% do.call(rbind,.) %>% as.vector
-rsfa_group_fdrp <- p.adjust(rsfa_group_ps, method="fdr")
+# get main effects of group for each measure
+rsfa_22q_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"))
+rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL"))
+
+netho_22q_lms <- get_parcel_group_lm(list=netho_wide, groups=c("22qDel","CONTROL"))
+netho_chr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHR","CONTROL"))
+
+gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"))
+gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL"))
 
 ```
 
