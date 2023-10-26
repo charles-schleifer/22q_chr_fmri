@@ -652,13 +652,22 @@ get_parcel_group_lm <- function(list,
 
 # get main effects of group for each measure
 rsfa_22q_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"))
+print(paste("RSFA 22q significant regions:",sum(rsfa_22q_lms$FDR_sig)))
+
 rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL"))
+print(paste("RSFA CHR significant regions:",sum(rsfa_chr_lms$FDR_sig)))
 
 netho_22q_lms <- get_parcel_group_lm(list=netho_wide, groups=c("22qDel","CONTROL"))
+print(paste("NetHo 22q significant regions:",sum(netho_22q_lms$FDR_sig, na.rm=TRUE)))
+
 netho_chr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHR","CONTROL"))
+print(paste("NetHo CHR significant regions:",sum(netho_chr_lms$FDR_sig, na.rm=TRUE)))
 
 gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"))
+print(paste("GBC 22q significant regions:",sum(gbc_22q_lms$FDR_sig)))
+
 gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL"))
+print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$FDR_sig)))
 
 ```
 
