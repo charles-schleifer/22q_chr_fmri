@@ -23,7 +23,7 @@ mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla
 if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
 
 # list packages to load
-packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr", "ggplot2","ggpubr","RColorBrewer", "ciftiTools","tableone", "data.table", "reshape2","neuroCombat","pls")
+packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","ggpubr","RColorBrewer", "ciftiTools","tableone", "data.table", "reshape2","neuroCombat","pls")
 
 # install packages if not yet installed
 all_packages <- rownames(installed.packages())
@@ -147,6 +147,15 @@ demo_22q$Group <- factor(demo_22q$Group,levels=c("PATIENT-DEL","CONTROL"),labels
 demo_22q_napls <- rbind(demo_22q, demo_napls)
 # get age squared column for regression
 demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
+```
+
+add converter label for NAPLS2
+```{r}
+converters <- read_xlsx(file.path(project,"demographics/NAPLS/converters.xlsx"))
+convert_ids <- merge(x=converters, y=napls_id_match, by=c("SiteNumber","SubjectNumber"))
+demo_22q_napls$GroupConvert <- as.character(demo_22q_napls$Group)
+demo_22q_napls[which(demo_22q_napls$MRI_S_ID %in% convert_ids$MRI_S_ID),"GroupConvert"] <- "CHRc"
+demo_22q_napls$GroupConvert %<>% as.factor
 ```
 
 load movement data
@@ -606,6 +615,7 @@ test linear models for 22q vs TD and CHR vs TD separately
 lm_parcel_group_covars <- function(df,var,predictors,groups,groupcol,refgroup){
   # create formula with var on left side and predictors string on right
   form <- reformulate(predictors,response=var)
+  print(form)
   #print(form)
   # test linear model
   lm <- lm(formula=form,data=df, na.action="na.omit")
@@ -624,11 +634,13 @@ get_parcel_group_lm <- function(list,
                                 groups, 
                                 groupcol="Group", 
                                 refgroup="CONTROL", 
-                                predictors="Group + AGE + AGE2 + SEX + Site + percent_udvarsme", 
+                                covars="AGE + AGE2 + SEX + Site + percent_udvarsme", 
                                 alpha=0.05, 
                                 roi_key=ji_key,
                                 prefix="r_"){
   if(length(groups)!=2){ stop("Error: number of groups not equal to 2")}
+  # add group to string of model variables
+  predictors <- paste(groupcol, "+", covars)
   # filter by specified groups and relevel factor
   df_all <- as.data.frame(list$df)
   df_all$groupcol <- df_all[,groupcol]
@@ -669,6 +681,12 @@ gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL"))
 print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$FDR_sig)))
 
 ```
+test CHRc vs TD
+```{r}
+gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL"), groupcol="GroupConvert")
+print(paste("GBC CHRc significant regions:",sum(gbc_chrc_lms$FDR_sig)))
+```
+
 plot group difference maps
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to take xifti atlas (with ROIs denoted by unique values) and return list of xifti matrix indices by brain structure for each ROI
