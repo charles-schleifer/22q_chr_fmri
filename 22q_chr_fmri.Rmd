@@ -823,11 +823,24 @@ write.table(netho_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_SC.t
 
 ```
 
+read brainsmash outputs
+```{r}
+
+```
+
+
+
+
+
+
 demo table
 ```{r}
 demo_table <- CreateTableOne(data=demo_22q_napls, strata="Group", vars=c("AGE","SEX"))
 demo_table
 ```
+
+
+
 
 
 
