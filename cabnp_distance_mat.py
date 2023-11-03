@@ -20,6 +20,8 @@ from brainsmash.workbench.geo import cortex
 #from brainsmash.workbench.geo import subcortex
 #from brainsmash.workbench.geo import parcellate
 
+# compute cortical distance matrices for each hemisphere
+# https://brainsmash.readthedocs.io/en/latest/gettingstarted.html#computing-a-cortical-distance-matrix
 for hemi in ["L","R"]:
     print(hemi)
     label="CortexParcelLabels_"+hemi+".dlabel.nii"

@@ -3,7 +3,7 @@
 """
 Created on Thu Nov  2 18:19:10 2023
 Script to generate sets of brain map permutations preserving spatial autocorrelation for null distributions
-@author: charlie
+@author: C. Schleifer
 """
 #import numpy as np
 import pandas as pd
