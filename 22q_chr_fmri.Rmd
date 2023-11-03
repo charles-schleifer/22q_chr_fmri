@@ -859,6 +859,7 @@ compare RSFA and NetHo via permutation
 ```{r}
 # function to compute correlation between two brain maps and compare to brainsmash null distribution
 # requires df for brain map1, and df and brainsmash output for map2
+# outputs list object with true correlation and vector for null distribution
 perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), val_col1="beta", val_col2="beta", method="pearson"){
   m1 <- data.frame(INDEX=map1[,"INDEX"], col1=map1[,val_col1])
   m2 <- data.frame(INDEX=map2[,"INDEX"], col2=map2[,val_col2])
@@ -867,6 +868,11 @@ perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), va
   cor <- cor(x=as.numeric(m3$col1), y=as.numeric(m3$col2), use="complete.obs")
   nulls <- lapply(cols, function(c) cor(x=as.numeric(df$col1), y=as.numeric(df[,c]), use="complete.obs", method=method)) %>% unlist %>% as.vector
   out <- list(true_correlation=cor, nulls=nulls)
+}
+
+# function to plot true correlation vs nulls
+plot_cor_nulls <- function(input){
+  
 }
 
 rsfa_22q_bsmash_cor_L <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L)
