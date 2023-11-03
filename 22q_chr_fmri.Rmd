@@ -787,6 +787,42 @@ view_xifti_surface(pl_gbc_chr_b, title="Global Connectivity: CHR vs TD", cex.tit
 
 ```
 
+write files for brainsmash null model generation
+needs separate txt files per hemisphere with values ordered by ascending parcel ID
+```{r}
+# RSFA Left cortex
+rsfa_22q_lms_L <- filter(rsfa_22q_lms, INDEX <= 180)
+rsfa_22q_lms_L_b <- rsfa_22q_lms_L[order(rsfa_22q_lms_L$INDEX),"beta"]
+write.table(rsfa_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# RSFA Right cortex
+rsfa_22q_lms_R <- filter(rsfa_22q_lms, INDEX > 180 & INDEX <= 360)
+rsfa_22q_lms_R_b <- rsfa_22q_lms_R[order(rsfa_22q_lms_R$INDEX),"beta"]
+write.table(rsfa_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# RSFA subcortex
+rsfa_22q_lms_SC <- filter(rsfa_22q_lms, INDEX > 360)
+rsfa_22q_lms_SC_b <- rsfa_22q_lms_SC[order(rsfa_22q_lms_SC$INDEX),"beta"]
+write.table(rsfa_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# NetHo Left cortex
+netho_22q_lms_L <- filter(netho_22q_lms, INDEX <= 180)
+netho_22q_lms_L_b <- netho_22q_lms_L[order(netho_22q_lms_L$INDEX),"beta"]
+write.table(netho_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# NetHo Right cortex
+netho_22q_lms_R <- filter(netho_22q_lms, INDEX > 180 & INDEX <= 360)
+netho_22q_lms_R_b <- netho_22q_lms_R[order(netho_22q_lms_R$INDEX),"beta"]
+write.table(netho_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# NetHo subcortex
+netho_22q_lms_SC <- filter(netho_22q_lms, INDEX > 360)
+netho_22q_lms_SC_b <- netho_22q_lms_SC[order(netho_22q_lms_SC$INDEX),"beta"]
+write.table(netho_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+
+```
+
 demo table
 ```{r}
 demo_table <- CreateTableOne(data=demo_22q_napls, strata="Group", vars=c("AGE","SEX"))
