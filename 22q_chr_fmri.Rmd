@@ -7,61 +7,65 @@ output: html_document
 
 # setup workspace
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
-# clear workspace
-rm(list = ls(all.names = TRUE))
+# function to set up environment
+init_env <- function(){  
+  # clear workspace
+  rm(list = ls(all.names = TRUE))
+  
+  # use SSHFS to mount hoffman2 server (download SSHFS for mac: https://osxfuse.github.io/)
+  # TODO: set hoffman2 username
+  uname <- "schleife"
+  # set local path to mount server
+  hoffman <- "~/Desktop/hoffman_mount"
+  # create directory if needed 
+  if(!file.exists(hoffman)){dir.create(hoffman)}
+  # make string to run as system command
+  mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla.edu:/u/project/cbearden/data ",hoffman)
+  # if hoffman directory is empty, use system command and sshfs to mount server, if not empty assume already mounted and skip
+  if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
+  
+  # list packages to load
+  packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","ggpubr","RColorBrewer", "ciftiTools","tableone", "data.table",   "reshape2","neuroCombat","pls")
+  
+  # install packages if not yet installed
+  all_packages <- rownames(installed.packages())
+  installed_packages <- packages %in% all_packages
+  if (any(installed_packages == FALSE)){install.packages(packages[!installed_packages])}
+  
+  # load packages
+  invisible(lapply(packages, library, character.only = TRUE))
+  
+  # install neuroComBat from github 
+  # https://github.com/Jfortin1/neuroCombat_Rpackage
+  #install_github("jfortin1/neuroCombatData")
+  #install_github("jfortin1/neuroCombat_Rpackage")
+  
+  # use the filter function from dplyr, not stats
+  conflict_prefer("filter", "dplyr")
+  
+  # get path to project repo directory
+  project <- here()
+  print(paste("Project directory:", project))
+  
+  # set up connectome workbench path for ciftiTools
+  # https://www.humanconnectome.org/software/get-connectome-workbench
+  # local wbpath (edit this path if workbench is installed in another location, e.g. on hoffman: /u/project/CCN/apps/hcp/current/workbench/bin_rh_linux64/)
+  # TODO: edit if necessary
+  wbpath <- "/Applications/workbench/bin_macosx64/"
+  ciftiTools.setOption("wb_path", wbpath)
+  
+  # set local path to SSHFS mount point for hoffman:/u/project/cbearden/data
+  # TODO: edit if necessary
+  hoffman <- "~/Desktop/hoffman_mount/"
+  
+  # load rgl for ciftiTools visualization
+  # may require XQartz v2.8.1 to be installed locally
+  if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
+  rgl::setupKnitr()
+  rgl::rgl.open(); rgl::rgl.close()
+}
 
-# use SSHFS to mount hoffman2 server (download SSHFS for mac: https://osxfuse.github.io/)
-# TODO: set hoffman2 username
-uname <- "schleife"
-# set local path to mount server
-hoffman <- "~/Desktop/hoffman_mount"
-# create directory if needed 
-if(!file.exists(hoffman)){dir.create(hoffman)}
-# make string to run as system command
-mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla.edu:/u/project/cbearden/data ",hoffman)
-# if hoffman directory is empty, use system command and sshfs to mount server, if not empty assume already mounted and skip
-if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
-
-# list packages to load
-packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","ggpubr","RColorBrewer", "ciftiTools","tableone", "data.table", "reshape2","neuroCombat","pls")
-
-# install packages if not yet installed
-all_packages <- rownames(installed.packages())
-installed_packages <- packages %in% all_packages
-if (any(installed_packages == FALSE)){install.packages(packages[!installed_packages])}
-
-# load packages
-invisible(lapply(packages, library, character.only = TRUE))
-
-# install neuroComBat from github 
-# https://github.com/Jfortin1/neuroCombat_Rpackage
-#install_github("jfortin1/neuroCombatData")
-#install_github("jfortin1/neuroCombat_Rpackage")
-
-# use the filter function from dplyr, not stats
-conflict_prefer("filter", "dplyr")
-
-# get path to project repo directory
-project <- here()
-print(paste("Project directory:", project))
-
-# set up connectome workbench path for ciftiTools
-# https://www.humanconnectome.org/software/get-connectome-workbench
-# local wbpath (edit this path if workbench is installed in another location, e.g. on hoffman: /u/project/CCN/apps/hcp/current/workbench/bin_rh_linux64/)
-# TODO: edit if necessary
-wbpath <- "/Applications/workbench/bin_macosx64/"
-ciftiTools.setOption("wb_path", wbpath)
-
-# set local path to SSHFS mount point for hoffman:/u/project/cbearden/data
-# TODO: edit if necessary
-hoffman <- "~/Desktop/hoffman_mount/"
-
-# load rgl for ciftiTools visualization
-# may require XQartz v2.8.1 to be installed locally
-if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
-rgl::setupKnitr()
-rgl::rgl.open(); rgl::rgl.close()
-
+init_env()
 ```
 
 get subject IDs and load demographic data
@@ -353,7 +357,7 @@ sessionInfo()
 sink()
 
 # save image
-save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
+save.image(file=file.path(project,"demographics/22q_chr_fmri.Rdata"),compress = "bzip2")
 ```
 
 reload NAPLS data and save
@@ -611,7 +615,7 @@ test linear models for 22q vs TD and CHR vs TD separately
 lm_parcel_group_covars <- function(df,var,predictors,groups,groupcol,refgroup){
   # create formula with var on left side and predictors string on right
   form <- reformulate(predictors,response=var)
-  print(form)
+  #print(form)
   #print(form)
   # test linear model
   lm <- lm(formula=form,data=df, na.action="na.omit")
@@ -715,10 +719,10 @@ atlas_xifti_new_vals <- function(xii, df, roi_col, val_col){
   df$roilabel <- df[,roi_col]
   # for each roi in xii, set all relevant vertices to value from val_col based on roi_col
   for (roi in names(inds)){
-    print(roi)
+    #print(roi)
     # get value for roi
     out_val <- as.numeric(filter(df[,c("roilabel",val_col)], roilabel==gsub("r_","",roi))[val_col])
-    print(out_val)
+    #print(out_val)
     # loop through brain structures, if ROI has any indices in a structure, set those to the output value
     for (struct in names(inds[[roi]])){
       roi_inds <- inds[[roi]][[struct]]
@@ -790,9 +794,19 @@ demo_table
 ```
 
 
+
+
+save workspace with full data
+```{r paged.print=FALSE}
+# save image
+save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
+```
+
+
 load data (instead of loading individual files from hoffman)
-```{r}
-#load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
+```{r message=TRUE, warning=FALSE}
+# init_env(); load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
+# init_env(); load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
 ```
 
 
