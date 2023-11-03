@@ -407,10 +407,6 @@ reload NAPLS data and save
 
 ```
 
-load data (instead of loading individual files from hoffman)
-```{r}
-#load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
-```
 
 harmonize sites with neurocombat
 need to harmonize separately for each measure (rsfa, local connectivity, global connectivity)
@@ -794,6 +790,10 @@ demo_table
 ```
 
 
+load data (instead of loading individual files from hoffman)
+```{r}
+#load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
+```
 
 
 
