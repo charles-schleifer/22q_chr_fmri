@@ -8,64 +8,61 @@ output: html_document
 # setup workspace
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to set up environment
-init_env <- function(){  
-  # clear workspace
-  rm(list = ls(all.names = TRUE))
-  
-  # use SSHFS to mount hoffman2 server (download SSHFS for mac: https://osxfuse.github.io/)
-  # TODO: set hoffman2 username
-  uname <- "schleife"
-  # set local path to mount server
-  hoffman <- "~/Desktop/hoffman_mount"
-  # create directory if needed 
-  if(!file.exists(hoffman)){dir.create(hoffman)}
-  # make string to run as system command
-  mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla.edu:/u/project/cbearden/data ",hoffman)
-  # if hoffman directory is empty, use system command and sshfs to mount server, if not empty assume already mounted and skip
-  if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
-  
-  # list packages to load
-  packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","ggpubr","RColorBrewer", "ciftiTools","tableone", "data.table",   "reshape2","neuroCombat","pls")
-  
-  # install packages if not yet installed
-  all_packages <- rownames(installed.packages())
-  installed_packages <- packages %in% all_packages
-  if (any(installed_packages == FALSE)){install.packages(packages[!installed_packages])}
-  
-  # load packages
-  invisible(lapply(packages, library, character.only = TRUE))
-  
-  # install neuroComBat from github 
-  # https://github.com/Jfortin1/neuroCombat_Rpackage
-  #install_github("jfortin1/neuroCombatData")
-  #install_github("jfortin1/neuroCombat_Rpackage")
-  
-  # use the filter function from dplyr, not stats
-  conflict_prefer("filter", "dplyr")
-  
-  # get path to project repo directory
-  project <- here()
-  print(paste("Project directory:", project))
-  
-  # set up connectome workbench path for ciftiTools
-  # https://www.humanconnectome.org/software/get-connectome-workbench
-  # local wbpath (edit this path if workbench is installed in another location, e.g. on hoffman: /u/project/CCN/apps/hcp/current/workbench/bin_rh_linux64/)
-  # TODO: edit if necessary
-  wbpath <- "/Applications/workbench/bin_macosx64/"
-  ciftiTools.setOption("wb_path", wbpath)
-  
-  # set local path to SSHFS mount point for hoffman:/u/project/cbearden/data
-  # TODO: edit if necessary
-  hoffman <- "~/Desktop/hoffman_mount/"
-  
-  # load rgl for ciftiTools visualization
-  # may require XQartz v2.8.1 to be installed locally
-  if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
-  rgl::setupKnitr()
-  rgl::rgl.open(); rgl::rgl.close()
-}
+# clear workspace
+rm(list = ls(all.names = TRUE))
 
-init_env()
+# use SSHFS to mount hoffman2 server (download SSHFS for mac: https://osxfuse.github.io/)
+# TODO: set hoffman2 username
+uname <- "schleife"
+# set local path to mount server
+hoffman <- "~/Desktop/hoffman_mount"
+# create directory if needed 
+if(!file.exists(hoffman)){dir.create(hoffman)}
+# make string to run as system command
+mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla.edu:/u/project/cbearden/data ",hoffman)
+# if hoffman directory is empty, use system command and sshfs to mount server, if not empty assume already mounted and skip
+if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
+
+# list packages to load
+packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","ggrepel","ggpubr","RColorBrewer", "ciftiTools","tableone", "data.table", "reshape2","neuroCombat","pls")
+
+# install packages if not yet installed
+all_packages <- rownames(installed.packages())
+installed_packages <- packages %in% all_packages
+if (any(installed_packages == FALSE)){install.packages(packages[!installed_packages])}
+
+# load packages
+invisible(lapply(packages, library, character.only = TRUE))
+
+# install neuroComBat from github 
+# https://github.com/Jfortin1/neuroCombat_Rpackage
+#install_github("jfortin1/neuroCombatData")
+#install_github("jfortin1/neuroCombat_Rpackage")
+
+# use the filter function from dplyr, not stats
+conflict_prefer("filter", "dplyr")
+
+# get path to project repo directory
+project <- here()
+print(paste("Project directory:", project))
+
+# set up connectome workbench path for ciftiTools
+# https://www.humanconnectome.org/software/get-connectome-workbench
+# local wbpath (edit this path if workbench is installed in another location, e.g. on hoffman: /u/project/CCN/apps/hcp/current/workbench/bin_rh_linux64/)
+# TODO: edit if necessary
+wbpath <- "/Applications/workbench/bin_macosx64/"
+ciftiTools.setOption("wb_path", wbpath)
+
+# set local path to SSHFS mount point for hoffman:/u/project/cbearden/data
+# TODO: edit if necessary
+hoffman <- "~/Desktop/hoffman_mount/"
+
+# load rgl for ciftiTools visualization
+# may require XQartz v2.8.1 to be installed locally
+if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
+rgl::setupKnitr()
+rgl::rgl.open(); rgl::rgl.close()
+
 ```
 
 get subject IDs and load demographic data
@@ -771,6 +768,23 @@ view_xifti_surface(pl_netho_22q_b_fdr, title="Local Connectivity: 22qDel vs TD",
 pl_gbc_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta_FDR")
 view_xifti_surface(pl_gbc_22q_b_fdr, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 
+# plot group difference beta 
+# 22q RSFA
+pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# 22q NetHo
+pl_netho_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_netho_22q_b, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# 22q GBC
+pl_gbc_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_gbc_22q_b, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+
+
+
+
 # plot CHR threshold free beta
 # 22q RSFA
 pl_rsfa_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_chr_lms, roi_col="INDEX", val_col="beta")
@@ -793,32 +807,32 @@ needs separate txt files per hemisphere with values ordered by ascending parcel 
 # RSFA Left cortex
 rsfa_22q_lms_L <- filter(rsfa_22q_lms, INDEX <= 180)
 rsfa_22q_lms_L_b <- rsfa_22q_lms_L[order(rsfa_22q_lms_L$INDEX),"beta"]
-write.table(rsfa_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(rsfa_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # RSFA Right cortex
 rsfa_22q_lms_R <- filter(rsfa_22q_lms, INDEX > 180 & INDEX <= 360)
 rsfa_22q_lms_R_b <- rsfa_22q_lms_R[order(rsfa_22q_lms_R$INDEX),"beta"]
-write.table(rsfa_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(rsfa_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # RSFA subcortex
 rsfa_22q_lms_SC <- filter(rsfa_22q_lms, INDEX > 360)
 rsfa_22q_lms_SC_b <- rsfa_22q_lms_SC[order(rsfa_22q_lms_SC$INDEX),"beta"]
-write.table(rsfa_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(rsfa_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # NetHo Left cortex
 netho_22q_lms_L <- filter(netho_22q_lms, INDEX <= 180)
 netho_22q_lms_L_b <- netho_22q_lms_L[order(netho_22q_lms_L$INDEX),"beta"]
-write.table(netho_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(netho_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # NetHo Right cortex
 netho_22q_lms_R <- filter(netho_22q_lms, INDEX > 180 & INDEX <= 360)
 netho_22q_lms_R_b <- netho_22q_lms_R[order(netho_22q_lms_R$INDEX),"beta"]
-write.table(netho_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(netho_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # NetHo subcortex
 netho_22q_lms_SC <- filter(netho_22q_lms, INDEX > 360)
 netho_22q_lms_SC_b <- netho_22q_lms_SC[order(netho_22q_lms_SC$INDEX),"beta"]
-write.table(netho_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(netho_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 
 ```
@@ -842,17 +856,16 @@ read_brainsmash <- function(path, indices, key=ji_key){
 
 rsfa_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_RSFA_L_permuted.csv"), indices=1:180)
 rsfa_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_RSFA_R_permuted.csv"), indices=181:360)
+netho_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_NetHo_L_permuted.csv"), indices=1:180)
+netho_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_NetHo_R_permuted.csv"), indices=181:360)
+
 
 # plot a few shuffled brains
-view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V1"), title="BrainSMASH, RSFA, L, 1", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
-
-view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V5"), title="BrainSMASH, RSFA, L, 5", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
-
-view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V100"), title="BrainSMASH, RSFA, L, 100", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
-
-view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V1000"), title="BrainSMASH, RSFA, R, 1000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
-
-view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V10000"), title="BrainSMASH, RSFA, R, 10000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V1"), title="BrainSMASH, RSFA, L, 1", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V5"), title="BrainSMASH, RSFA, L, 5", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V100"), title="BrainSMASH, RSFA, L, 100", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V1000"), title="BrainSMASH, RSFA, R, 1000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V10000"), title="BrainSMASH, RSFA, R, 10000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 ```
 
 compare RSFA and NetHo via permutation
@@ -860,23 +873,116 @@ compare RSFA and NetHo via permutation
 # function to compute correlation between two brain maps and compare to brainsmash null distribution
 # requires df for brain map1, and df and brainsmash output for map2
 # outputs list object with true correlation and vector for null distribution
-perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), val_col1="beta", val_col2="beta", method="pearson"){
-  m1 <- data.frame(INDEX=map1[,"INDEX"], col1=map1[,val_col1])
-  m2 <- data.frame(INDEX=map2[,"INDEX"], col2=map2[,val_col2])
+perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), val_col1="beta", val_col2="beta", method){
+  # get list of parcels in brainsmash data (e.g. left hemisphere only)
+  indices <- bsmash2[which(!is.na(bsmash2$V1)),"INDEX"]
+  # filter input for only those
+  fmap1 <- filter(map1, INDEX %in% indices) 
+  fmap2 <- filter(map2, INDEX %in% indices)
+  # merge data
+  m1 <- data.frame(INDEX=fmap1[,"INDEX"], col1=fmap1[,val_col1])
+  m2 <- data.frame(INDEX=fmap2[,"INDEX"], col2=fmap2[,val_col2])
   m3 <- merge(x=m1, y=m2, by="INDEX")
   df <- merge(x=bsmash2, y=m3, by="INDEX")
-  cor <- cor(x=as.numeric(m3$col1), y=as.numeric(m3$col2), use="complete.obs")
+  # true correlation
+  cor <- cor(x=as.numeric(m3$col1), y=as.numeric(m3$col2), use="complete.obs", method=method)
+  # correlate with shuffled brains
   nulls <- lapply(cols, function(c) cor(x=as.numeric(df$col1), y=as.numeric(df[,c]), use="complete.obs", method=method)) %>% unlist %>% as.vector
   out <- list(true_correlation=cor, nulls=nulls)
 }
 
-# function to plot true correlation vs nulls
-plot_cor_nulls <- function(input){
-  
+# function to get permuted two-tailed p-value
+perm_p <- function(input){
+  sum <- sum(abs(input$nulls) > abs(input$true_correlation))
+  len <- length(input$nulls)
+  out <- sum/len
+  print(sum)
+  print(len)
+  print(out)
+  return(out)
 }
 
-rsfa_22q_bsmash_cor_L <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L)
+# function to plot true correlation vs nulls
+plot_cor_nulls <- function(input, title="true correlation vs nulls"){
+  p <- perm_p(input)
+  ggplot(data=data.frame(nulls=input$nulls), aes(x=nulls))+
+    geom_histogram(bins=40,fill="slategrey", alpha=0.7)+
+    geom_vline(xintercept=input$true_correlation, color="red", size=1, lty="solid")+
+    geom_label_repel(data=data.frame(xval=input$true_correlation, text=paste("p =",round(p, digits=3))), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
+    xlab("correlation")+
+    ggtitle(title)+
+    theme_classic()
+}
+
+netho_rsfa_22q_cor_L <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L, method="pearson")
+netho_rsfa_22q_cor_R <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_R, method="pearson")
+
+rsfa_netho_22q_cor_L <- perm_cor_brain_map(map1=rsfa_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_L, method="pearson")
+rsfa_netho_22q_cor_R <- perm_cor_brain_map(map1=rsfa_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_R, method="pearson")
+
+gbc_rsfa_22q_cor_L <- perm_cor_brain_map(map1=gbc_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L, method="pearson")
+gbc_rsfa_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_R, method="pearson")
+
+gbc_netho_22q_cor_L <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_L, method="pearson")
+gbc_netho_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_R, method="pearson")
+
+plot_cor_nulls(netho_rsfa_22q_cor_L, title="NetHo vs RSFA, LH")
+plot_cor_nulls(netho_rsfa_22q_cor_R, title="NetHo vs RSFA, RH")
+#plot_cor_nulls(rsfa_netho_22q_cor_L, title="RSFA vs NetHo, LH, n=10,000")
+#plot_cor_nulls(rsfa_netho_22q_cor_R, title="RSFA vs NetHo, RH, n=10,000")
+plot_cor_nulls(gbc_rsfa_22q_cor_L, title="GBC vs RSFA, LH")
+plot_cor_nulls(gbc_rsfa_22q_cor_R, title="GBC vs RSFA, RH")
+plot_cor_nulls(gbc_netho_22q_cor_L, title="GBC vs NetHo, LH")
+plot_cor_nulls(gbc_netho_22q_cor_R, title="GBC vs NetHo, RH")
+
+
 ```
+read AHBA data
+```{r}
+# load parcellated AHBA data
+# this csv is the output of abagen.get_expression_data() python function to extract AHBA expression from CAB-NP surface atlas
+# https://abagen.readthedocs.io/en/stable/user_guide/expression.html
+ahbaSurfCABNP <- read.csv(file.path(project,"CAB-NP_surface_abagen_expression.csv"), header=T, sep=",") %>% rename("INDEX"="label")
+
+ahbaSurfCABNP_L <- filter(ahbaSurfCABNP, INDEX <= 180)
+ahbaSurfCABNP_R <- filter(ahbaSurfCABNP, INDEX > 180 & INDEX <= 360)
+```
+
+AHBA partial least squares
+```{r}
+# function to compare chosen brain map to AHBA with PLS
+ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col){
+  indices <- ahba$INDEX
+  # get list of genes
+  genes <- names(ahba)[which(names(ahba) != "INDEX")]
+  # filter for only rois in ahba data and merge
+  fmap <- filter(map, INDEX %in% indices)[,c("INDEX", val_col)]
+  df <- merge(x=ahba, y=fmap, by="INDEX") 
+  # make pls formula with val_col on left and all genes on right
+  xcols <- paste(genes, collapse=" + ")
+  plsformula <- as.formula(paste(val_col,"~", xcols))
+  # test model
+  pls_test <- plsr(formula=plsformula, data=df, scale=TRUE, center=TRUE, validation="CV", na.action="na.omit")
+}
+
+rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
+
+validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "R2")
+validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
+#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "MSEP")
+
+# x and y total variance explained
+# https://stackoverflow.com/questions/55380244/how-to-get-y-variance-explained-from-a-pls-model
+y_r2 <- R2(rsfsa_ahba_pls, estimate = "train", intercept = FALSE)$val %>% drop 
+x_r2 <- cumsum(explvar(rsfsa_ahba_pls))/100
+
+```
+
+
+
+
+
+
 
 
 
@@ -901,8 +1007,8 @@ save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compres
 
 load data (instead of loading individual files from hoffman)
 ```{r message=TRUE, warning=FALSE}
-# init_env(); load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
-# init_env(); load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
+# load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
+# load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
 ```
 
 
