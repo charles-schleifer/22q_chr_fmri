@@ -961,7 +961,8 @@ ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col){
   # make pls formula with val_col on left and all genes on right
   xcols <- paste(genes, collapse=" + ")
   plsformula <- as.formula(paste(val_col,"~", xcols))
-  # test model with split half cross-validation
+  # test model with k-fold cross validation
+  # TODO: decide on k. trying split half now
   pls_test <- plsr(formula=plsformula, data=df, scale=TRUE, center=TRUE, validation="CV", na.action="na.omit", segments=2)
 }
 
