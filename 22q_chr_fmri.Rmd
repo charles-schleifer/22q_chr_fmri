@@ -973,8 +973,8 @@ validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
 
 # x and y total variance explained
 # https://stackoverflow.com/questions/55380244/how-to-get-y-variance-explained-from-a-pls-model
-y_r2 <- R2(rsfsa_ahba_pls, estimate = "train", intercept = FALSE)$val %>% drop 
-x_r2 <- cumsum(explvar(rsfsa_ahba_pls))/100
+y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
+x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
 
 ```
 
