@@ -951,7 +951,8 @@ ahbaSurfCABNP_R <- filter(ahbaSurfCABNP, INDEX > 180 & INDEX <= 360)
 AHBA partial least squares
 ```{r}
 # function to compare chosen brain map to AHBA with PLS
-ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col){
+ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col, verbose=FALSE){
+  if(verbose==TRUE){print(val_col)}
   indices <- ahba$INDEX
   # get list of genes
   genes <- names(ahba)[which(names(ahba) != "INDEX")]
@@ -965,17 +966,44 @@ ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col){
   pls_test <- plsr(formula=plsformula, data=df, scale=TRUE, center=TRUE, validation="CV", na.action="na.omit", segments=2)
 }
 
+# function to return first component Y R2 from pls model
+# chose components with ncomp, default is just first component
+get_yr2 <- function(input, ncomp=1, estimate="CV"){
+  out <- R2(input, estimate = estimate, intercept = FALSE, ncomp=ncomp)$val %>% drop
+  return(out)
+}
+
 rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
 
-validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "R2")
-validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
+#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "R2")
+#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
 #validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "MSEP")
 
 # x and y total variance explained
 # https://stackoverflow.com/questions/55380244/how-to-get-y-variance-explained-from-a-pls-model
-y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
+#y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
+y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
 x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
 
+# function to compute PLS and brainSMASH permutation test with Y R2 as test statistic
+# default n=10,000 permutations (expects brainsmash columns named V1:V10000)
+ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), verbose=TRUE){
+  # first test pls model with true brain map
+  pls <- ahba_pls(map=map, val_col=val_col, verbose=verbose)
+  # test same model for permuted maps
+  nulls <- lapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=TRUE))
+  # get first component Y R2 from each model
+  y_r2 <-  lapply(nulls, function(c) get_yr2) %>% unlist %>% as.vector 
+  # return as list 
+  out <- list(pls=pls, null_models=nulls, test_stat=y_r2)
+  return(out)
+}
+  
+rsfsa_ahba_perm_pls <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L)
+
+
+
+ 
 ```
 
 
