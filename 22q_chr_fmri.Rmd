@@ -987,7 +987,8 @@ get_yr2 <- function(input, ncomp=1, estimate="CV"){
 
 # function to compute PLS and brainSMASH permutation test with Y R2 as test statistic
 # default n=10,000 permutations (expects brainsmash columns named V1:V10000)
-# option for parallel computation of 
+# option for parallel computation 
+# calculates 1-tailed p-value based on the fraction of permuted test stats greater than the true test stat
 ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), verbose=FALSE, parallel=TRUE, cores=8){
   # first test pls model with true brain map
   pls <- ahba_pls(map=map, val_col=val_col, verbose=verbose)
@@ -998,7 +999,7 @@ ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), ver
     null_mods <- mclapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=FALSE), mc.cores=cores)
     nulls <-  mclapply(nulls, function(c) get_yr2, mc.cores=cores) %>% unlist %>% as.vector 
   }else if(parallel==FALSE){
-    null_mods <- lapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=TRUE))
+    null_mods <- lapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=verbose))
     nulls <-  lapply(nulls, function(c) get_yr2(input=c, ncomp=1, estimate="CV")) %>% unlist %>% as.vector 
   }
   # get 1-tailed p-value
