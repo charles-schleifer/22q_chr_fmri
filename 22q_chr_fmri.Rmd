@@ -988,8 +988,9 @@ get_yr2 <- function(input, ncomp=1, estimate="CV"){
 # function to compute PLS and brainSMASH permutation test with Y R2 as test statistic
 # default n=10,000 permutations (expects brainsmash columns named V1:V10000)
 # option for parallel computation, defaults to all cores
+# TODO: multi core computation failing with cores>1
 # calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
-ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), verbose=FALSE, parallel=TRUE){
+ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), verbose=FALSE, parallel=FALSE){
   # first test pls model with true brain map
   pls <- ahba_pls(map=map, val_col=val_col, verbose=verbose)
   # get test statistic for true model
@@ -1014,10 +1015,10 @@ ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), ver
 }
 
 # test with only a couple permutations  
-rsfsa_ahba_perm_test <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:2), parallel=TRUE)
+#rsfsa_ahba_perm_test <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:2), parallel=FALSE)
 
 # RSFA PLS permutation
-#rsfsa_ahba_perm <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:10000), parallel=TRUE)
+rsfsa_ahba_perm <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:10000), parallel=FALSE)
 
  
 ```
