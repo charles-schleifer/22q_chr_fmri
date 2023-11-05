@@ -1009,7 +1009,9 @@ ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), ver
   # get 1-tailed p-value
   p <- sum(nulls > test_stat)/length(nulls)
   # return as list with original pls model, test statistic (first component Y R2), all null models, null test statistics, and 1-tailed p-value 
-  out <- list(pls=pls, test_stat=test_stat, null_models=null_mods, nulls=nulls, pval=p)
+  #out <- list(pls=pls, test_stat=test_stat, null_models=null_mods, nulls=nulls, pval=p)
+  # don't return models to save memory
+  out <- list(test_stat=test_stat, nulls=nulls, pval=p)
   return(out)
 }
 
