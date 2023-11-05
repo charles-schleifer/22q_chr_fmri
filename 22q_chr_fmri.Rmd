@@ -998,8 +998,9 @@ ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), ver
   out <- list(pls=pls, null_models=nulls, test_stat=y_r2)
   return(out)
 }
-  
-rsfsa_ahba_perm_pls <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L)
+
+# test with only a couple permutations  
+rsfsa_ahba_perm_pls <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:3))
 
 
 
