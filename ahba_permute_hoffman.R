@@ -2,7 +2,7 @@
 # script to be run as array job on hoffman for computing single instance of permuted ahba-mri pls
 
 # list packages to load
-packages <- c("dplyr","tidyr","pls")
+packages <- c("optparse","dplyr","tidyr","pls")
 
 # install packages if not yet installed
 all_packages <- rownames(installed.packages())
