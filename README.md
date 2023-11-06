@@ -37,4 +37,4 @@ Analysis of parcellated Brain Signal Variability (aka Resting State Fluctuation 
 * need to sync repo to hoffman cluster to use job scheduler for computing permuted PLS models. use bash scripts to submit Rscript to scheduler
     * submit_ahba_permute_hoffman.sh --> run_rscript_args.sh --> ahba_permute_hoffman.R
     * collect_permutation_results_hoffman.R
-        * output: rsfa_ahba_pls_permuted_yr2.csv
+        * output: rsfa_ahba_pls_permuted_yr2.csv (full PLS models for each null map are stored on hoffman in git_exclude directory)
