@@ -1,9 +1,20 @@
 # 22q_chr_fmri
 
 ## Overview
-
+Analysis of parcellated Brain Signal Variability (aka Resting State Fluctuation Amplitude; RSFA), Local Connectivity (aka Network Homogeneity; NetHo), and Global Connectivity (GBC) in 22q11.2 Deletion Syndrome (22qDel), Clinical High Risk for Psychosis (CHR) and typically developing (TD) controls
 
 ## Dependencies
+* several python packages
+  * [abagen](https://abagen.readthedocs.io/en/stable/) for AHBA gene expression parcellation
+  * [BrainSMASH](https://brainsmash.readthedocs.io/en/latest/) for generating appropriate spatial null models for brain maps 
+* various [R packages](https://github.com/charles-schleifer/22q_chr_fmri/blob/main/package_versions.txt) 
+* requires wb_command for ciftiTools functions that read/plot MRI data. 
+  * download: https://www.humanconnectome.org/software/get-connectome-workbench
+  * script expects the workbench directory to be `/Applications/workbench/bin_macosx64` (either download to this location, or edit the path in the script)
+* to read fMRI results from the hoffman2 server, the script expects that the server `hoffman2.idre.ucla.edu:/u/project/cbearden/data` is mounted to your local machine at the path `~/Desktop/hoffman_mount` using an application such as SSHFS (mac download: https://osxfuse.github.io/)
+  * requires first-level MRI results to be already computed on server (see https://github.com/charles-schleifer/22q_hoffman)
+* paths are all relative to the project directory, which should be detected automatically by the package 'here' if RStudio is opened via the included .Rproj file 
+
 
 ## Analysis Steps
 
