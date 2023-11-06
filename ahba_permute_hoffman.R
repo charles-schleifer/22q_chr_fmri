@@ -93,8 +93,8 @@ get_yr2 <- function(input, ncomp=1, estimate="CV"){
 
 # get pls model
 mod <- ahba_pls(map=bsmash, val_col=col, verbose=FALSE)
-save(mod, file=file.path(project,"git_exclude/perm_nulls/",measure,paste0("null_model_",measure,"_",col,".rda")))
+save(mod, file=file.path(project,"git_exclude/perm_mods/",measure,paste0("null_model_",measure,"_",col,".rda")))
 
 # get explained variance
 yr2 <- get_yr2(input=mod, ncomp=1:5, estimate="CV")
-write.table(yr2, file=file.path(project,"/perm_nulls/",measure,paste0("null_model_yR2_",measure,"_",col,".csv")), row.names=FALSE, col.names=FALSE, sep=",", quote=FALSE, eol="\r")
+write.table(yr2, file=file.path(project,"git_exclude/perm_nulls/",measure,paste0("null_model_yR2_",measure,"_",col,".csv")), row.names=FALSE, col.names=FALSE, sep=",", quote=FALSE, eol="\r")
