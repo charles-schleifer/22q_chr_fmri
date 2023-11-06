@@ -951,6 +951,7 @@ plot_cor_nulls(gbc_netho_22q_cor_R, title="GBC vs NetHo, RH")
 
 
 ```
+
 read AHBA data
 ```{r}
 # load parcellated AHBA data
@@ -987,7 +988,7 @@ get_yr2 <- function(input, ncomp=1, estimate="CV"){
   return(out)
 }
 
-#rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
+rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
 
 #validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "R2")
 #validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
@@ -996,8 +997,8 @@ get_yr2 <- function(input, ncomp=1, estimate="CV"){
 # x and y total variance explained
 # https://stackoverflow.com/questions/55380244/how-to-get-y-variance-explained-from-a-pls-model
 #y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
-#y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
-#x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
+rsfa_y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
+rsfa_x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
 ```
 
 takes too long to compute permutations locally
