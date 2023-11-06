@@ -834,6 +834,20 @@ netho_22q_lms_SC <- filter(netho_22q_lms, INDEX > 360)
 netho_22q_lms_SC_b <- netho_22q_lms_SC[order(netho_22q_lms_SC$INDEX),"beta"]
 #write.table(netho_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
+# gbc Left cortex
+gbc_22q_lms_L <- filter(gbc_22q_lms, INDEX <= 180)
+gbc_22q_lms_L_b <- gbc_22q_lms_L[order(gbc_22q_lms_L$INDEX),"beta"]
+#write.table(gbc_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# gbc Right cortex
+gbc_22q_lms_R <- filter(gbc_22q_lms, INDEX > 180 & INDEX <= 360)
+gbc_22q_lms_R_b <- gbc_22q_lms_R[order(gbc_22q_lms_R$INDEX),"beta"]
+#write.table(gbc_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# gbc subcortex
+gbc_22q_lms_SC <- filter(gbc_22q_lms, INDEX > 360)
+gbc_22q_lms_SC_b <- gbc_22q_lms_SC[order(gbc_22q_lms_SC$INDEX),"beta"]
+#write.table(gbc_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_GBC_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 ```
 
