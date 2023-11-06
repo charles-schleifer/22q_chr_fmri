@@ -997,12 +997,14 @@ ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), ver
   test_stat <- get_yr2(input=pls, ncomp=1, estimate="CV")
   # compute permuted test stats
   nulls <- NULL
-  for(i in length(cols)){
+  for(i in 1:length(cols)){
     col <- cols[i]
-    # print message
-    #cat(col,"...",(i/length(cols)*100),"%","\r")
-    #flush.console()  
-    print(paste(col,"...",(i/length(cols)*100),"%"))
+    # print message on the same line for each loop
+    if(verbose==TRUE){
+      cat(col,"...",(i/length(cols)*100),"%","\r")
+      flush.console()
+    }
+    #print(paste(col,"...",(i/length(cols)*100),"%"))
     null_mod <- ahba_pls(map=bsmash, val_col=col,verbose=FALSE)
     null <- get_yr2(input=null_mod, ncomp=1, estimate="CV")
     nulls <- c(nulls, null)
@@ -1026,10 +1028,10 @@ ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), ver
 }
 
 # test with only a couple permutations  
-rsfsa_ahba_perm_test <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:2), parallel=FALSE, verbose=TRUE)
+#rsfsa_ahba_perm_test <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:2), parallel=FALSE, verbose=TRUE)
 
 # RSFA PLS for n=1,000 permutations
-#rsfsa_ahba_perm <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:1000), parallel=FALSE, verbose=TRUE)
+rsfsa_ahba_perm <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:1000), parallel=FALSE, verbose=TRUE)
 
  
 ```
