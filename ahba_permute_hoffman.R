@@ -1,5 +1,6 @@
 # C. Schleifer 11/5/23
 # script to be run as array job on hoffman for computing single instance of permuted ahba-mri pls
+# saves full pls model for each permutation (output in project/git_exclude/perm_nulls), as well as CSVs with first 5 components Y R2 in project/perm_nulls
 
 # list packages to load
 packages <- c("optparse","dplyr","tidyr","pls")
