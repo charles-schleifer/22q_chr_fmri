@@ -18,7 +18,7 @@
 #### Main analysis script
 * 22q_chr_fmri.Rmd
 
-### Permutation comparison of brain maps
+#### Permutation comparison of brain maps
 * after group difference maps generated in main script, need to export results and run brainSMASH to generate spatial autocorrelation-preserving permutations for null models
 * cabnp_prep_brainsmash.sh
 * cabnp_distance_mat.py
