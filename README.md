@@ -13,7 +13,7 @@
 #### Parcellated gene expression
 * prep_cabnp_abagen.sh
 * abagen_ahba_cabnp.py
-* outputs:abagen_vol_methods_report.txt, abagen_surf_methods_report.txt, CAB-NP_subcort_abagen_expression.csv, CAB-NP_surface_abagen_expression.csv
+* outputs: abagen_vol_methods_report.txt, abagen_surf_methods_report.txt, CAB-NP_subcort_abagen_expression.csv, CAB-NP_surface_abagen_expression.csv
 
 #### Main analysis script
 * 22q_chr_fmri.Rmd
