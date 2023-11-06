@@ -16,6 +16,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 project <- "/u/project/cbearden/data/scripts/charlie/22q_chr_fmri/"
 
 # get command line options for array index and measure to use
+# expects that SGE_TASK_ID is passed as flagged option by bash run script
 option_list <- list(
   make_option(c("--SGE_TASK_ID"), type="numeric", default=NULL, 
               help="job array index", metavar="character"),
@@ -91,8 +92,8 @@ get_yr2 <- function(input, ncomp=1, estimate="CV"){
 
 # get pls model
 mod <- ahba_pls(map=bsmash, val_col=col, verbose=FALSE)
-save(mod, file=file.path(project,"git_exclude/perm_nulls/",paste0("null_model_",measure,"_",col,".rda")))
+save(mod, file=file.path(project,"git_exclude/perm_nulls/",measure,paste0("null_model_",measure,"_",col,".rda")))
 
 # get explained variance
 yr2 <- get_yr2(input=mod, ncomp=1:5, estimate="CV")
-write.csv(yr2, file=file.path(project,"/perm_nulls/",paste0("null_model_yR2_",measure,"_",col,"csv")))
+write.table(yr2, file=file.path(project,"/perm_nulls/",measure,paste0("null_model_yR2_",measure,"_",col,".csv")), row.names=FALSE, col.names=FALSE, sep=",", quote=FALSE, eol="\r")
