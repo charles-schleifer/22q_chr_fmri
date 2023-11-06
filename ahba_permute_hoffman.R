@@ -16,14 +16,24 @@ invisible(lapply(packages, library, character.only = TRUE))
 project <- "/u/project/cbearden/data/scripts/charlie/22q_chr_fmri/"
 
 # get job array index
-i <- Sys.getenv("SGE_TASK_ID")
+i <- as.numeric(Sys.getenv("SGE_TASK_ID"))
 
 # get brainsmash columns to use
 cols <- paste0("V",1:10000)
 col <- cols[i]
 
-# get measure to use
-measure <- "rsfa"
+# get command line options for array index and measure to use
+option_list <- list(
+  make_option(c("--SGE_TASK_ID"), type="numeric", default=NULL, 
+              help="job array index", metavar="character"),
+  make_option(c("--measure"), type="character", default=NULL, 
+              help="rsfa, netho, or gbc", metavar="character")) 
+
+opt_parser <- OptionParser(option_list=option_list)
+opt <- parse_args(opt_parser)
+
+SGE_TASK_ID=opt$SGE_TASK_ID
+measure=opt$measure
 
 # read CAB-NP network parcellation key
 # https://github.com/ColeLab/ColeAnticevicNetPartition

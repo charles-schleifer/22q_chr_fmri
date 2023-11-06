@@ -984,56 +984,49 @@ get_yr2 <- function(input, ncomp=1, estimate="CV"){
 #y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
 #y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
 #x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
+```
 
-# function to compute PLS and brainSMASH permutation test with Y R2 as test statistic
-# default n=10,000 permutations (expects brainsmash columns named V1:V10000)
-# option for parallel computation, defaults to all cores
-# TODO: parallel failing for mc.cores>1
-# calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
-ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), verbose=FALSE, parallel=TRUE){
-  # first test pls model with true brain map
-  pls <- ahba_pls(map=map, val_col=val_col, verbose=verbose)
-  # get test statistic for true model
-  test_stat <- get_yr2(input=pls, ncomp=1, estimate="CV")
-  # compute permuted test stats
-  nulls <- NULL
-  for(i in 1:length(cols)){
-    col <- cols[i]
-    # print message on the same line for each loop
-    if(verbose==TRUE){
-      cat(col,"...",(i/length(cols)*100),"%","\r")
-      flush.console()
-    }
-    #print(paste(col,"...",(i/length(cols)*100),"%"))
-    null_mod <- ahba_pls(map=bsmash, val_col=col,verbose=FALSE)
-    null <- get_yr2(input=null_mod, ncomp=1, estimate="CV")
-    nulls <- c(nulls, null)
-  }
-  # # test same model for permuted maps
-  # if(parallel==TRUE){
-  #   # use fewer cores if number of columns is less than the specificed number of cores
-  #   cores=detectCores()
-  #   if(cores > length(cols)){cores=length(cols)}
-  #   null_mods <- mclapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=FALSE), mc.cores=cores)
-  #   nulls <-  mclapply(null_mods, function(c) get_yr2(input=c, ncomp=1, estimate="CV"), mc.cores=cores) %>% unlist %>% as.vector 
-  # }else if(parallel==FALSE){
-  #   null_mods <- lapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=verbose))
-  #   nulls <-  lapply(null_mods, function(c) get_yr2(input=c, ncomp=1, estimate="CV")) %>% unlist %>% as.vector 
-  # }
-  # get 1-tailed p-value
-  p <- sum(nulls > test_stat)/length(nulls)
-  # return as list with original pls model, test statistic (first component Y R2), null test statistics, and 1-tailed p-value 
-  out <- list(pls=pls, test_stat=test_stat, nulls=nulls, pval=p)
-  return(out)
-}
-
-# test with only a couple permutations  
-#rsfsa_ahba_perm_test <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:2), parallel=FALSE, verbose=TRUE)
-
-# RSFA PLS for n=1,000 permutations
-rsfsa_ahba_perm <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:1000), parallel=FALSE, verbose=TRUE)
-
- 
+takes too long to compute permutations locally
+on hoffman, clone this git repo and run submit_ahba_permute_hoffman.sh to submit as array
+```{r}
+# # function to compute PLS and brainSMASH permutation test with Y R2 as test statistic
+# # default n=10,000 permutations (expects brainsmash columns named V1:V10000)
+# # option for parallel computation, defaults to all cores
+# # TODO: parallel failing for mc.cores>1
+# # calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
+# ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), verbose=FALSE, parallel=TRUE){
+#   # first test pls model with true brain map
+#   pls <- ahba_pls(map=map, val_col=val_col, verbose=verbose)
+#   # get test statistic for true model
+#   test_stat <- get_yr2(input=pls, ncomp=1, estimate="CV")
+#   # compute permuted test stats
+#   nulls <- NULL
+#   for(i in 1:length(cols)){
+#     col <- cols[i]
+#     # print message on the same line for each loop
+#     if(verbose==TRUE){
+#       cat(col,"...",(i/length(cols)*100),"%","\r")
+#       flush.console()
+#     }
+#     #print(paste(col,"...",(i/length(cols)*100),"%"))
+#     null_mod <- ahba_pls(map=bsmash, val_col=col,verbose=FALSE)
+#     null <- get_yr2(input=null_mod, ncomp=1, estimate="CV")
+#     nulls <- c(nulls, null)
+#   }
+#   # get 1-tailed p-value
+#   p <- sum(nulls > test_stat)/length(nulls)
+#   # return as list with original pls model, test statistic (first component Y R2), null test statistics, and 1-tailed p-value 
+#   out <- list(pls=pls, test_stat=test_stat, nulls=nulls, pval=p)
+#   return(out)
+# }
+# 
+# # test with only a couple permutations  
+# #rsfsa_ahba_perm_test <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:2), parallel=FALSE, verbose=TRUE)
+# 
+# # RSFA PLS for n=1,000 permutations
+# rsfsa_ahba_perm <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:1000), parallel=FALSE, verbose=TRUE)
+# 
+#  
 ```
 
 
