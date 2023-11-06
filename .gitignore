@@ -40,3 +40,6 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# manually exclude
+git_exclude
