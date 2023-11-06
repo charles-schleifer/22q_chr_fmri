@@ -25,6 +25,10 @@ col <- cols[i]
 # get measure to use
 measure <- "rsfa"
 
+# read CAB-NP network parcellation key
+# https://github.com/ColeLab/ColeAnticevicNetPartition
+ji_key <- read.table(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_LabelKey.txt"),header=T)
+
 # function to read brainsmash outputs, which are CSVs with one column per parcel and one row per shuffled brain
 # needs path to csv, vector of indices (e.g. 1:180 or 181:360), and a key dataframe
 # output will be key df merged with n brainsmash columns named V1:Vn, with rows not in indices set to NA
