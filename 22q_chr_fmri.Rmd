@@ -995,23 +995,32 @@ ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), ver
   pls <- ahba_pls(map=map, val_col=val_col, verbose=verbose)
   # get test statistic for true model
   test_stat <- get_yr2(input=pls, ncomp=1, estimate="CV")
-  # test same model for permuted maps
-  if(parallel==TRUE){
-    # use fewer cores if number of columns is less than the specificed number of cores
-    cores=detectCores()
-    if(cores > length(cols)){cores=length(cols)}
-    null_mods <- mclapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=FALSE), mc.cores=cores)
-    nulls <-  mclapply(null_mods, function(c) get_yr2(input=c, ncomp=1, estimate="CV"), mc.cores=cores) %>% unlist %>% as.vector 
-  }else if(parallel==FALSE){
-    null_mods <- lapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=verbose))
-    nulls <-  lapply(null_mods, function(c) get_yr2(input=c, ncomp=1, estimate="CV")) %>% unlist %>% as.vector 
+  # compute permuted test stats
+  nulls <- NULL
+  for(i in length(cols)){
+    col <- cols[i]
+    # print message
+    cat(col,"...",(i/length(cols)*100),"%","\r")
+    flush.console()  
+    null_mod <- ahba_pls(map=bsmash, val_col=col,verbose=FALSE)
+    null <- get_yr2(input=null_mod, ncomp=1, estimate="CV")
+    nulls <- c(nulls, null)
   }
+  # # test same model for permuted maps
+  # if(parallel==TRUE){
+  #   # use fewer cores if number of columns is less than the specificed number of cores
+  #   cores=detectCores()
+  #   if(cores > length(cols)){cores=length(cols)}
+  #   null_mods <- mclapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=FALSE), mc.cores=cores)
+  #   nulls <-  mclapply(null_mods, function(c) get_yr2(input=c, ncomp=1, estimate="CV"), mc.cores=cores) %>% unlist %>% as.vector 
+  # }else if(parallel==FALSE){
+  #   null_mods <- lapply(cols, function(c) ahba_pls(map=bsmash, val_col=c,verbose=verbose))
+  #   nulls <-  lapply(null_mods, function(c) get_yr2(input=c, ncomp=1, estimate="CV")) %>% unlist %>% as.vector 
+  # }
   # get 1-tailed p-value
   p <- sum(nulls > test_stat)/length(nulls)
-  # return as list with original pls model, test statistic (first component Y R2), all null models, null test statistics, and 1-tailed p-value 
-  #out <- list(pls=pls, test_stat=test_stat, null_models=null_mods, nulls=nulls, pval=p)
-  # don't return models to save memory
-  out <- list(test_stat=test_stat, nulls=nulls, pval=p)
+  # return as list with original pls model, test statistic (first component Y R2), null test statistics, and 1-tailed p-value 
+  out <- list(pls=pls, test_stat=test_stat, nulls=nulls, pval=p)
   return(out)
 }
 
