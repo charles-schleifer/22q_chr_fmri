@@ -18,4 +18,5 @@ rscript="/u/project/cbearden/data/scripts/charlie/22q_chr_fmri/ahba_permute_hoff
 
 
 # qsub command
-qsub -cwd -V -N $job -o $logdir -e $logdir -t 1-${length}:1 -l h_data=16G,h_rt=4:00:00 $run $rscript --measure="rsfa"
+#qsub -cwd -V -N $job -o $logdir -e $logdir -t 1-${length}:1 -l h_data=16G,h_rt=4:00:00 $run $rscript --measure="rsfa"
+qsub -cwd -V -N $job -o $logdir -e $logdir -t 1-${length}:1 -l h_data=16G,h_rt=4:00:00 $run $rscript --measure="netho"
