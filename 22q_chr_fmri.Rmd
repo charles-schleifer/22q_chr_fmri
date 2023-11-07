@@ -502,7 +502,7 @@ gbc_norm <- hc_normalize(df=gbc_combat, hcs_ids=hc_ids)
 plot pre/post combat
 ```{r}
 # function to plot pre and post combat
-plot_combat <- function(df, raw_col){
+plot_combat <- function(df, raw_col, title=""){
   # get mean of all parcels per subject pre/post combat to look at distributions
   subs <- sort(unique(df$MRI_S_ID))
   sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
@@ -519,16 +519,16 @@ plot_combat <- function(df, raw_col){
   # plot meean RSFA distributions by site pre combat
   pl_precombat <- ggplot(parc_means_demo, aes(precombat, fill=Site, after_stat(count)))+
     geom_density(kernel="gaussian", alpha=0.5)+
-    #scale_fill_manual(values=rainbow(13))+
+    scale_fill_manual(values=rainbow(13))+
     theme_classic()+
-    ggtitle(paste("pre-combat",raw_col))
+    ggtitle(paste("pre-combat",title))
   
   # plot meean RSFA distributions by site post combat
   pl_postcombat <- ggplot(parc_means_demo, aes(postcombat, fill=Site, after_stat(count)))+
     geom_density(kernel="gaussian", alpha=0.5)+ 
-    #scale_fill_manual(values=rainbow(13))+
+    scale_fill_manual(values=rainbow(13))+
     theme_classic()+
-    ggtitle(paste("post-combat",raw_col))
+    ggtitle(paste("post-combat",title))
   
   ggarrange(pl_precombat,pl_postcombat, nrow=1, common.legend=T,legend="right")
 }
@@ -565,17 +565,17 @@ norm_plot_netho
 norm_plot_gbc <- plot_normed(gbc_norm, name="gbc")
 norm_plot_gbc
 
-combat_plot_rsfa <- plot_combat(df=rsfa_norm, raw_col="t_sd")
+combat_plot_rsfa <- plot_combat(df=rsfa_norm, raw_col="t_sd", title="RSFA")
+combat_plot_netho <- plot_combat(df=netho_norm, raw_col="NetHo", title="NetHo")
+combat_plot_gbc <- plot_combat(df=gbc_norm, raw_col="GBC", title="GBC")
+
 combat_plot_rsfa
-
-combat_plot_netho <- plot_combat(df=netho_norm, raw_col="NetHo")
 combat_plot_netho
-
-combat_plot_gbc <- plot_combat(df=gbc_norm, raw_col="GBC")
 combat_plot_gbc
 
 
 ```
+
 convert normed combat results back to wide df merged with demographics
 ```{r}
 # function to convert long to wide df with indices (renamed to r_index) as columns
