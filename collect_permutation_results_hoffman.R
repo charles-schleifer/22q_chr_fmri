@@ -17,7 +17,7 @@ project <- "/u/project/cbearden/data/scripts/charlie/22q_chr_fmri/"
 
 
 # measures <- c("rsfa","netho","gbc")
-measures <- c("rsfa")
+measures <- c("netho","rsfa")
 for(measure in measures){
   # list all files
   fnames <- list.files(file.path(project,"git_exclude/perm_nulls",measure), full.names = TRUE)
