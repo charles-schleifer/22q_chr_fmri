@@ -906,18 +906,26 @@ perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), va
 }
 
 # function to get permuted two-tailed p-value
-perm_p <- function(input){
-  sum <- sum(abs(input$nulls) > abs(input$true_correlation))
-  len <- length(input$nulls)
+perm_p <- function(test_stat, nulls, alternative="two.sided", verbose=FALSE){
+  if(alternative=="two.sided"){
+    sum <- sum(abs(nulls) > abs(test_stat))
+  }else if(alternative=="greater"){
+    sum <- sum(nulls > test_stat)
+  }else if(alternative=="less"){
+    sum <- sum(nulls < test_stat)
+  }
+  len <- length(nulls)
   out <- sum/len
-  print(sum)
-  print(len)
-  print(out)
+  if(verbose==TRUE){
+    print(sum)
+    print(len)
+    print(out)
+  }
   return(out)
 }
 
 # function to plot true correlation vs nulls
-plot_cor_nulls <- function(input, title="true correlation vs nulls"){
+plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided", title=""){
   p <- perm_p(input)
   ggplot(data=data.frame(nulls=input$nulls), aes(x=nulls))+
     geom_histogram(bins=40,fill="slategrey", alpha=0.7)+
