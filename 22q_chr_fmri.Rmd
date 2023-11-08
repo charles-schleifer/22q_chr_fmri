@@ -925,13 +925,13 @@ perm_p <- function(test_stat, nulls, alternative="two.sided", verbose=FALSE){
 }
 
 # function to plot true correlation vs nulls
-plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided", title=""){
-  p <- perm_p(input)
-  ggplot(data=data.frame(nulls=input$nulls), aes(x=nulls))+
+plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided", title="", xlab="test statistic"){
+  p <- perm_p(test_stat=test_stat, nulls=nulls, alternative=alternative)
+  ggplot(data=data.frame(nulls=nulls), aes(x=nulls))+
     geom_histogram(bins=40,fill="slategrey", alpha=0.7)+
-    geom_vline(xintercept=input$true_correlation, color="red", size=1, lty="solid")+
-    geom_label_repel(data=data.frame(xval=input$true_correlation, text=paste("p =",round(p, digits=3))), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
-    xlab("correlation")+
+    geom_vline(xintercept=test_stat, color="red", size=1, lty="solid")+
+    geom_label_repel(data=data.frame(xval=test_stat, text=paste("p =",round(p, digits=3))), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
+    xlab(xlab)+
     ggtitle(title)+
     theme_classic()
 }
@@ -948,14 +948,14 @@ gbc_rsfa_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=rsfa_22q_lms, bs
 gbc_netho_22q_cor_L <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_L, method="pearson")
 gbc_netho_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_R, method="pearson")
 
-plot_cor_nulls(netho_rsfa_22q_cor_L, title="NetHo vs RSFA, LH")
-plot_cor_nulls(netho_rsfa_22q_cor_R, title="NetHo vs RSFA, RH")
+plot_cor_nulls(test_stat=netho_rsfa_22q_cor_L$true_correlation, nulls=netho_rsfa_22q_cor_L$nulls, xlab="Pearson r", title="NetHo vs RSFA, LH")
+plot_cor_nulls(test_stat=netho_rsfa_22q_cor_R$true_correlation, nulls=netho_rsfa_22q_cor_R$nulls, xlab="Pearson r", title="NetHo vs RSFA, RH")
 #plot_cor_nulls(rsfa_netho_22q_cor_L, title="RSFA vs NetHo, LH, n=10,000")
 #plot_cor_nulls(rsfa_netho_22q_cor_R, title="RSFA vs NetHo, RH, n=10,000")
-plot_cor_nulls(gbc_rsfa_22q_cor_L, title="GBC vs RSFA, LH")
-plot_cor_nulls(gbc_rsfa_22q_cor_R, title="GBC vs RSFA, RH")
-plot_cor_nulls(gbc_netho_22q_cor_L, title="GBC vs NetHo, LH")
-plot_cor_nulls(gbc_netho_22q_cor_R, title="GBC vs NetHo, RH")
+plot_cor_nulls(test_stat=gbc_rsfa_22q_cor_L$true_correlation, nulls=gbc_rsfa_22q_cor_L$nulls, xlab="Pearson r", title="GBC vs RSFA, LH")
+plot_cor_nulls(test_stat=gbc_rsfa_22q_cor_R$true_correlation, nulls=gbc_rsfa_22q_cor_R$nulls, xlab="Pearson r", title="GBC vs RSFA, RH")
+plot_cor_nulls(test_stat=gbc_netho_22q_cor_L$true_correlation, nulls=gbc_netho_22q_cor_L$nulls, xlab="Pearson r", title="GBC vs NetHo, LH")
+plot_cor_nulls(test_stat=gbc_netho_22q_cor_R$true_correlation, nulls=gbc_netho_22q_cor_R$nulls, xlab="Pearson r", title="GBC vs NetHo, RH")
 
 
 ```
@@ -1007,6 +1007,10 @@ rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
 #y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
 rsfa_y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
 rsfa_x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
+
+gbc_ahba_pls <- ahba_pls(map=gbc_22q_lms, val_col="beta")
+gbc_y_r2 <- get_yr2(input=gbc_ahba_pls, ncomp=1:5)
+gbc_x_r2 <- cumsum(explvar(gbc_ahba_pls))[1:5]/100
 ```
 
 takes too long to compute permutations locally
