@@ -45,15 +45,15 @@ R_22q_TD_NetHo = bransmash_generate(n=10000, map=path+"22q_TD_NetHo_R.txt", mat=
 # save as CSV
 pd.DataFrame(R_22q_TD_NetHo).to_csv(path+"22q_TD_NetHo_R_permuted.csv", header=False, index=False)
 
-# get left hemisphere RSFA permutations
+# get left hemisphere GBC permutations
 L_22q_TD_GBC = bransmash_generate(n=10000, map=path+"22q_TD_GBC_L.txt", mat=path+"CABPN_surface_geo_dist_mat_L.txt")
 # save as CSV
-pd.DataFrame(L_22q_TD_RSFA).to_csv(path+"22q_TD_GBC_L_permuted.csv", header=False, index=False)
+pd.DataFrame(L_22q_TD_GBC).to_csv(path+"22q_TD_GBC_L_permuted.csv", header=False, index=False)
 
-# get right hemisphere RSFA permutations
+# get right hemisphere GBC permutations
 R_22q_TD_GBC = bransmash_generate(n=10000, map=path+"22q_TD_GBC_R.txt", mat=path+"CABPN_surface_geo_dist_mat_R.txt")
 # save as CSV
-pd.DataFrame(L_22q_TD_RSFA).to_csv(path+"22q_TD_GBC_R_permuted.csv", header=False, index=False)
+pd.DataFrame(R_22q_TD_GBC).to_csv(path+"22q_TD_GBC_R_permuted.csv", header=False, index=False)
 
 
 # function evaluate variogram fits
