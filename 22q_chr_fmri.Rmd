@@ -1056,9 +1056,18 @@ on hoffman, clone this git repo and run submit_ahba_permute_hoffman.sh to submit
 #  
 ```
 
+get permuted PLS p-value
+```{r}
+# read nulls
+rsfa_nulls <- read.csv(file.path(project,"rsfa_ahba_pls_permuted_yr2.csv"))
+netho_nulls <- read.csv(file.path(project,"netho_ahba_pls_permuted_yr2.csv"))
+gbc_nulls <- read.csv(file.path(project,"gbc_ahba_pls_permuted_yr2.csv"))
 
+# plot distributions
+plot_cor_nulls(test_stat = rsfa_y_r2[1], nulls=as.numeric(rsfa_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="RSFA vs AHBA")
+plot_cor_nulls(test_stat = gbc_y_r2[1], nulls=as.numeric(gbc_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="GBC vs AHBA")
 
-
+```
 
 
 
