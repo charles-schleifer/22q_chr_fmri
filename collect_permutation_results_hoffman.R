@@ -2,7 +2,7 @@
 # script to collect permutation outputs and save as single CSV
 
 # list packages to load
-packages <- c"dplyr","tidyr")
+packages <- c("dplyr","tidyr")
 
 # install packages if not yet installed
 all_packages <- rownames(installed.packages())
