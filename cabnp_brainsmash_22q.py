@@ -65,11 +65,11 @@ def bransmash_eval(n:int, map:str, mat:str):
     out = base_fit(map, mat, nsurr=n)
     return out
 
-L_22q_TD_RSFA_eval = bransmash_eval(n=100, map=path+"22q_TD_RSFA_L.txt", mat=path+"CABPN_surface_geo_dist_mat_L.txt")
-
-R_22q_TD_RSFA_eval = bransmash_eval(n=100, map=path+"22q_TD_RSFA_R.txt", mat=path+"CABPN_surface_geo_dist_mat_R.txt")
-
-L_22q_TD_NetHo_eval = bransmash_eval(n=100, map=path+"22q_TD_NetHo_L.txt", mat=path+"CABPN_surface_geo_dist_mat_L.txt")
-
-R_22q_TD_NetHo_eval = bransmash_eval(n=100, map=path+"22q_TD_NetHo_R.txt", mat=path+"CABPN_surface_geo_dist_mat_R.txt")
+#L_22q_TD_RSFA_eval = bransmash_eval(n=100, map=path+"22q_TD_RSFA_L.txt", mat=path+"CABPN_surface_geo_dist_mat_L.txt")
+#
+#R_22q_TD_RSFA_eval = bransmash_eval(n=100, map=path+"22q_TD_RSFA_R.txt", mat=path+"CABPN_surface_geo_dist_mat_R.txt")
+#
+#L_22q_TD_NetHo_eval = bransmash_eval(n=100, map=path+"22q_TD_NetHo_L.txt", mat=path+"CABPN_surface_geo_dist_mat_L.txt")
+#
+#R_22q_TD_NetHo_eval = bransmash_eval(n=100, map=path+"22q_TD_NetHo_R.txt", mat=path+"CABPN_surface_geo_dist_mat_R.txt")
 
