@@ -963,7 +963,7 @@ plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided", title="", 
   p <- perm_p(test_stat=test_stat, nulls=nulls, alternative=alternative)
   ggplot(data=data.frame(nulls=nulls), aes(x=nulls))+
     geom_histogram(bins=40,fill="slategrey", alpha=0.7)+
-    geom_vline(xintercept=test_stat, color="red", size=1, lty="solid")+
+    geom_vline(xintercept=test_stat, color="red", linewidth=1, lty="solid")+
     geom_label_repel(data=data.frame(xval=test_stat, text=paste("p =",round(p, digits=3))), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
     xlab(xlab)+
     ggtitle(title)+
@@ -1103,6 +1103,67 @@ plot_cor_nulls(test_stat = gbc_y_r2[1], nulls=as.numeric(gbc_nulls[1,]), alterna
 
 
 ```
+
+univariate AHBA correlations
+```{r}
+# function to correlate two brain maps
+# map1 and map2 should be same length vectors corresponding to the same parcels
+cor_brain_maps <- function(map1, map2, method="pearson", use="complete.obs"){
+  cor <- cor(x=as.numeric(map1), y=as.numeric(map2), use=use, method=method)
+  return(cor)
+}
+
+cor_brain_ahba <- function(ahba=ahbaSurfCABNP_L, map, gene, val_col, verbose=FALSE){
+  if(verbose==TRUE){print(gene)}
+  indices <- ahba$INDEX
+  # filter for only rois in ahba data and merge
+  fmap <- filter(map, INDEX %in% indices)[,c("INDEX", val_col)]
+  df <- merge(x=ahba, y=fmap, by="INDEX") 
+  out <- cor_brain_maps(map1=df[,val_col], map2=df[,gene]) %>% as.numeric
+  return(out)
+}
+
+cor_brain_ahba_all <- function(ahba=ahbaSurfCABNP_L, map, val_col="beta", verbose=FALSE){
+  # get list of genes
+  genes <- names(ahba)[which(names(ahba) != "INDEX")]
+  cors <- lapply(genes, function(g) cor_brain_ahba(gene=g, map=map, val_col=val_col, verbose=verbose)) %>% unlist
+  out <- data.frame(gene=genes, cor=cors)
+  return(out)
+}
+
+# get AHBA correlations
+rsfa_ahba_cor <- cor_brain_ahba_all(map=rsfa_22q_lms, verbose=TRUE)
+#plot_cor_nulls(test_stat = 0.1, nulls=rsfa_ahba_cor$cor, alternative = "greater")
+
+# get top 10% absolute value of connections
+get_quantile <- function(data,probs=0.90,alternative="two.sided"){
+  if(alternative=="two.sided"){
+    data <- abs(data)
+  }
+  out <- as.numeric(quantile(data, probs=probs))
+}
+
+# to be run on the output of rsfa_ahba_cor
+get_quantile_genes <- function(df,probs=0.90,alternative="two.sided"){
+  # get correlation value for cutoff
+  threshold <- get_quantile(data=df$cor, probs=probs, alternative=alternative)
+  # get gene names past cutoff
+  if(alternative=="two.sided"){
+    genes <- df[which(abs(df$cor) > threshold),"gene"]
+  }else if(alternative=="greater"){
+    genes <- df[which(df$cor > threshold),"gene"]
+  }else if(alternative=="less"){
+    genes <- df[which(df$cor < threshold),"gene"]
+  }
+  return(genes)
+}
+
+# get top 10% of absolute value correlations for RSFA
+rsfa_ahba_abs10 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.90, alternative="two.sided")
+
+```
+
+
 
 
 
