@@ -1109,7 +1109,7 @@ univariate AHBA correlations
 # function to correlate two brain maps
 # map1 and map2 should be same length vectors corresponding to the same parcels
 cor_brain_maps <- function(map1, map2, method="pearson", use="complete.obs"){
-  cor <- cor(x=as.numeric(map1), y=as.numeric(map2), use=use, method=method)
+  cor <- cor(x=as.numeric(map1), y=as.numeric(map2), use=use, method=method) %>% as.numeric
   return(cor)
 }
 
@@ -1134,7 +1134,9 @@ cor_brain_ahba_all <- function(ahba=ahbaSurfCABNP_L, map, val_col="beta", verbos
 # get AHBA correlations
 rsfa_ahba_cor <- cor_brain_ahba_all(map=rsfa_22q_lms, verbose=TRUE)
 #plot_cor_nulls(test_stat = 0.1, nulls=rsfa_ahba_cor$cor, alternative = "greater")
+```
 
+```{r}
 # get top 10% absolute value of connections
 get_quantile <- function(data,probs=0.90,alternative="two.sided"){
   if(alternative=="two.sided"){
@@ -1158,12 +1160,41 @@ get_quantile_genes <- function(df,probs=0.90,alternative="two.sided"){
   return(genes)
 }
 
-# get top 10% of absolute value correlations for RSFA
-rsfa_ahba_abs10 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.90, alternative="two.sided")
+# get top 90th percentile of absolute value correlations for RSFA
+rsfa_ahba_abs90 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.90, alternative="two.sided")
+rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative="two.sided")
 
 ```
 
+brainsmash top quantile of univariate tested genes
+```{r}
+# calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
+ahba_permute_cor <- function(ahba=ahbaSurfCABNP_L, gene, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
+  if(verbose==TRUE){print(gene)}
+  # error if bsmash and ahba have overlapping column names
+  if(sum(names(bsmash) %in% names(ahba) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")} 
+  indices <- ahba$INDEX
+  # compute permuted test stats
+  nulls <- NULL
+  for(i in 1:length(bsmash_cols)){
+    df <- merge(x=ahba, y=bsmash, by="INDEX")
+    col <- bsmash_cols[i]
+    # print message on the same line for each loop
+    if(verbose==TRUE){
+      cat("\r",col,"...",(i/length(bsmash_cols)*100),"%","\r")
+      flush.console()
+    }
+    null <- cor(x=as.numeric(df[,gene]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
+    nulls <- c(nulls, null)
+  }
+  return(nulls)
+}
 
+# test with only a few permutations
+#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95[1:10], function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE, bsmash_cols=paste0("V",1:10)))
+
+rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
+```
 
 
 
