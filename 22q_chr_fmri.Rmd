@@ -1132,8 +1132,15 @@ cor_brain_ahba_all <- function(ahba=ahbaSurfCABNP_L, map, val_col="beta", verbos
 }
 
 # get AHBA correlations
-rsfa_ahba_cor <- cor_brain_ahba_all(map=rsfa_22q_lms, verbose=TRUE)
+rsfa_ahba_cor <- cor_brain_ahba_all(map=rsfa_22q_lms, verbose=FALSE)
 #plot_cor_nulls(test_stat = 0.1, nulls=rsfa_ahba_cor$cor, alternative = "greater")
+netho_ahba_cor <- cor_brain_ahba_all(map=netho_22q_lms, verbose=FALSE)
+gbc_ahba_cor <- cor_brain_ahba_all(map=gbc_22q_lms, verbose=FALSE)
+
+# write.table(rsfa_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_RSFA_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
+# write.table(netho_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_NetHo_AHBA.csv"), quote=FALSE,  row.names = FALSE, sep=",")
+# write.table(gbc_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_GBC_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
+
 ```
 
 ```{r}
