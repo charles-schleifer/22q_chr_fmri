@@ -715,6 +715,13 @@ print(paste("GBC CHRc significant regions:",sum(gbc_chrc_lms$FDR_sig)))
 
 ```
 
+save workspace with full data
+```{r paged.print=FALSE}
+# save image
+save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
+```
+
+
 plot group difference maps
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to take xifti atlas (with ROIs denoted by unique values) and return list of xifti matrix indices by brain structure for each ROI
@@ -1219,11 +1226,6 @@ demo_table
 
 
 
-save workspace with full data
-```{r paged.print=FALSE}
-# save image
-save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
-```
 
 
 load data (instead of loading individual files from hoffman)
