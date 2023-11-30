@@ -976,7 +976,9 @@ plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided", title="", 
     ggtitle(title)+
     theme_classic()
 }
+```
 
+```{r}
 netho_rsfa_22q_cor_L <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L, method="pearson")
 netho_rsfa_22q_cor_R <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_R, method="pearson")
 
@@ -1185,22 +1187,22 @@ rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative=
 brainsmash top quantile of univariate tested genes
 ```{r}
 # calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
-ahba_permute_cor <- function(ahba=ahbaSurfCABNP_L, gene, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
-  if(verbose==TRUE){print(gene)}
+map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
+  if(verbose==TRUE){print(variable)}
   # error if bsmash and ahba have overlapping column names
-  if(sum(names(bsmash) %in% names(ahba) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")} 
-  indices <- ahba$INDEX
+  #if(sum(names(bsmash) %in% names(map) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")} 
+  indices <- map$INDEX
+  df <- merge(x=map, y=bsmash, by="INDEX") %>% as.data.frame
   # compute permuted test stats
   nulls <- NULL
   for(i in 1:length(bsmash_cols)){
-    df <- merge(x=ahba, y=bsmash, by="INDEX")
     col <- bsmash_cols[i]
     # print message on the same line for each loop
     if(verbose==TRUE){
       cat("\r",col,"...",(i/length(bsmash_cols)*100),"%","\r")
       flush.console()
     }
-    null <- cor(x=as.numeric(df[,gene]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
+    null <- cor(x=as.numeric(df[,variable]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
     nulls <- c(nulls, null)
   }
   return(nulls)
@@ -1209,7 +1211,7 @@ ahba_permute_cor <- function(ahba=ahbaSurfCABNP_L, gene, bsmash, bsmash_cols=pas
 # test with only a few permutations
 #rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95[1:10], function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE, bsmash_cols=paste0("V",1:10)))
 
-rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
+#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(variable=g,map=ahbaSurfCABNP_L, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
 ```
 
 correlate with neuromaps output
@@ -1229,26 +1231,54 @@ cabnp_hcp_lh <- function(hcp_df, colname="GlasserRegion", cabnp_df){
 
 # merge with neuromap
 rsfa_22q_nmap <- cabnp_hcp_lh(cabnp_df=rsfa_22q_lms, hcp_df=neuromaps)
+netho_22q_nmap <- cabnp_hcp_lh(cabnp_df=netho_22q_lms, hcp_df=neuromaps)
+gbc_22q_nmap <- cabnp_hcp_lh(cabnp_df=gbc_22q_lms, hcp_df=neuromaps)
+
+# get neuromap df without fMRI result
+neuromaps_ordered <- subset(data.table(rsfa_22q_nmap), select=-c(beta, FDR_q, FDR_sig, beta_FDR, se, t, p))
 
 # correlate with nmap columns
 nmap_cor <- function(map1, map_all, method="pearson", use="complete.obs", cols=nmap_cols){
   cor <- lapply(cols, function(c) cor_brain_maps(map1=map1, map2=map_all[,c], method=method, use=use)) %>% as.numeric
   out <- data.frame(map=cols, cor=cor)
   out$cor %<>% as.numeric
+  out <- out[order(out$cor),]
   return(out)
 }
 
 rsfa_22q_nmap_cor <- nmap_cor(map1=rsfa_22q_nmap$beta, map_all=rsfa_22q_nmap, method="pearson", use="complete.obs")
-rsfa_22q_nmap_cor <- nmap_cor(map1=rsfa_22q_nmap$beta, map_all=rsfa_22q_nmap, method="pearson", use="complete.obs")
-rsfa_22q_nmap_cor <- nmap_cor(map1=rsfa_22q_nmap$beta, map_all=rsfa_22q_nmap, method="pearson", use="complete.obs")
+netho_22q_nmap_cor <- nmap_cor(map1=netho_22q_nmap$beta, map_all=netho_22q_nmap, method="pearson", use="complete.obs")
+gbc_22q_nmap_cor <- nmap_cor(map1=gbc_22q_nmap$beta, map_all=gbc_22q_nmap, method="pearson", use="complete.obs")
 
 # plot
-pl_cmruglu <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_nmap, roi_col="INDEX", val_col="cmruglu")
-view_xifti_surface(pl_cmruglu, title="Glucose Metabolism", cex.title=1.3, colors="magma",hemisphere="left")
-pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
-view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue(),hemisphere="left")
+# pl_cmruglu <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_nmap, roi_col="INDEX", val_col="cmruglu")
+# view_xifti_surface(pl_cmruglu, title="Glucose Metabolism", cex.title=1.3, colors="magma",hemisphere="left")
+# pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
+# view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue(),hemisphere="left")
 
+# bsmash permutations for neuromaps
+#rsfa_22q_nmap_nulls <- map_permute_cor(map=neuromaps_ordered, variable="cmruglu", bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000))
 
+# test perm p for one measure
+#perm_p(test_stat=rsfa_22q_nmap_cor[1,2], nulls=rsfa_22q_nmap_nulls, alternative="two.sided")
+
+# function to compute nulls and perm-p for each neuromaps measure
+perm_p_neuromaps <- function(neuromap_outputs, neuromap_df=neuromaps_ordered, bsmash, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE){
+  maps <- neuromap_outputs$map
+  for(map in maps){
+    # get true correlation
+    cor <- filter(neuromap_outputs, map==map)
+    # get nulls
+    nulls <- map_permute_cor(map=neuromap_df, variable=map, bsmash=bsmash, bsmash_cols=bsmash_cols)
+    # get p-val
+    p <- perm_p(test_stat=cor, nulls=nulls, alternative=alternative)
+    # return output
+    out <- list(cor=cor, nulls=nulls, p=p)
+    return(out)
+  }
+}
+
+rsfa_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
 
 ```
 
