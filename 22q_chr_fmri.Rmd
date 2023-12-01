@@ -24,7 +24,7 @@ mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla
 if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
 
 # list packages to load
-packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2", "ggrepel", "ggpubr", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
+packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","patchwork", "ggrepel", "ggpubr", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
 
 # install packages if not yet installed
 all_packages <- rownames(installed.packages())
@@ -913,7 +913,8 @@ rsfa_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_RSFA_
 rsfa_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_RSFA_R_permuted.csv"), indices=181:360)
 netho_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_NetHo_L_permuted.csv"), indices=1:180)
 netho_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_NetHo_R_permuted.csv"), indices=181:360)
-
+gbc_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_GBC_L_permuted.csv"), indices=1:180)
+gbc_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_GBC_R_permuted.csv"), indices=181:360)
 
 # plot a few shuffled brains
 # view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V1"), title="BrainSMASH, RSFA, L, 1", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
@@ -1263,26 +1264,96 @@ gbc_22q_nmap_cor <- nmap_cor(map1=gbc_22q_nmap$beta, map_all=gbc_22q_nmap, metho
 #perm_p(test_stat=rsfa_22q_nmap_cor[1,2], nulls=rsfa_22q_nmap_nulls, alternative="two.sided")
 
 # function to compute nulls and perm-p for each neuromaps measure
-perm_p_neuromaps <- function(neuromap_outputs, neuromap_df=neuromaps_ordered, bsmash, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE){
+# outputs list object containing neuromaps outputs with p-vals added, and a data frame with a column for each null and row for each measure
+perm_p_neuromaps <- function(neuromap_outputs, order=nmap_order, neuromap_df=neuromaps_ordered, bsmash, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE){
   maps <- neuromap_outputs$map
-  for(map in maps){
+  nmap_out <- neuromap_outputs
+  nmap_out$p <- NA
+  null_df <- NULL
+  for(m in maps){
     # get true correlation
-    cor <- filter(neuromap_outputs, map==map)
+    cor <- filter(neuromap_outputs, map==m)$cor
     # get nulls
-    nulls <- map_permute_cor(map=neuromap_df, variable=map, bsmash=bsmash, bsmash_cols=bsmash_cols)
+    nulls <- map_permute_cor(map=neuromap_df, variable=m, bsmash=bsmash, bsmash_cols=bsmash_cols)
     # get p-val
     p <- perm_p(test_stat=cor, nulls=nulls, alternative=alternative)
-    # return output
-    out <- list(cor=cor, nulls=nulls, p=p)
-    return(out)
+    # record outputs
+    nmap_out[which(nmap_out$map==m),"p"] <- p
+    null_df <- cbind(null_df,nulls)
   }
+  null_df %<>% as.data.frame
+  colnames(null_df) <- maps
+  null_df$perm <- 1:nrow(null_df)
+  nmap_out %<>% as.data.frame
+  nmap_out[match(order, nmap_out$map),]
+  out <- list(pvals=as.data.frame(nmap_out), nulls=null_df)
+  return(out)
 }
+
+# neuromaps permuted p-vals
+nmap_order <- c("cmruglu","CBF","cbv","cmr02","G1.fMRI","intersubjvar","PC1.AHBA","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2")
 
 rsfa_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
 
+netho_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=netho_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=netho_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+gbc_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=gbc_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
 ```
 
+plot neuromaps results
+```{r}
+# create long dataframes to plot nulls
+rsfa_22q_nuls_long <- melt.data.table(as.data.table(rsfa_22q_nmap_p$nulls), id.vars="perm")
+rsfa_22q_nuls_long$variable <- factor(rsfa_22q_nuls_long$variable,levels=nmap_order,ordered=TRUE)
 
+netho_22q_nuls_long <- melt.data.table(as.data.table(netho_22q_nmap_p$nulls), id.vars="perm")
+netho_22q_nuls_long$variable <- factor(netho_22q_nuls_long$variable,levels=nmap_order,ordered=TRUE)
+
+gbc_22q_nuls_long <- melt.data.table(as.data.table(gbc_22q_nmap_p$nulls), id.vars="perm")
+gbc_22q_nuls_long$variable <- factor(gbc_22q_nuls_long$variable,levels=nmap_order,ordered=TRUE)
+  
+rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21)+
+  geom_point(data=rsfa_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  ylab("Pearson's r")+
+  #ylab("")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Brain Signal Variability")
+
+netho_box <- ggplot(data=netho_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21)+
+  geom_point(data=netho_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  ylab("Pearson's r")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Local Connectivity")
+  
+gbc_box <- ggplot(data=gbc_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21)+
+  geom_point(data=gbc_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  ylab("Pearson's r")+
+  #ylab("")+
+  xlab("Brain Map Comparison")+
+  ggtitle("Global Connectivity")+
+  theme(legend.position="none")
+  
+neuromaps_22q_bplots <- rsfa_box/netho_box/gbc_box+plot_layout(guides = "collect")
+neuromaps_22q_bplots
+```
 
 
 
