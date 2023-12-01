@@ -1265,7 +1265,7 @@ gbc_22q_nmap_cor <- nmap_cor(map1=gbc_22q_nmap$beta, map_all=gbc_22q_nmap, metho
 
 # function to compute nulls and perm-p for each neuromaps measure
 # outputs list object containing neuromaps outputs with p-vals added, and a data frame with a column for each null and row for each measure
-perm_p_neuromaps <- function(neuromap_outputs, order=nmap_order, neuromap_df=neuromaps_ordered, bsmash, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE){
+perm_p_neuromaps <- function(neuromap_outputs, order=nmap_match$variable, neuromap_df=neuromaps_ordered, bsmash, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE){
   maps <- neuromap_outputs$map
   nmap_out <- neuromap_outputs
   nmap_out$p <- NA
@@ -1291,7 +1291,8 @@ perm_p_neuromaps <- function(neuromap_outputs, order=nmap_order, neuromap_df=neu
 }
 
 # neuromaps permuted p-vals
-nmap_order <- c("cmruglu","CBF","cbv","cmr02","G1.fMRI","intersubjvar","PC1.AHBA","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2")
+nmap_match <- data.frame(variable=c("cmruglu","cmr02","CBF","cbv","PC1.AHBA","G1.fMRI","intersubjvar","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2"),name=c("Glucose metabolism","Oxygen metabolism", "Cerebral blood flow", "Cerebral blood volume", "PC1 gene expression", "fMRI gradient", "Intersubject variability", "PC1 neurosynth", "Allometric scaling (PNC)", "Allometric scaling (NIH)", "Developmental expansion", "Evolutionary expansion", "Cortical thickness", "T1w/T2w ratio", "MEG delta", "MEG theta", "MEG alpha", "MEG beta", "MEG gamma1", "MEG gamma2"))
+#nmap_order <- c("cmruglu","cmr02","CBF","cbv","G1.fMRI","intersubjvar","PC1.AHBA","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2")
 
 rsfa_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
 
@@ -1305,54 +1306,64 @@ plot neuromaps results
 ```{r}
 # create long dataframes to plot nulls
 rsfa_22q_nuls_long <- melt.data.table(as.data.table(rsfa_22q_nmap_p$nulls), id.vars="perm")
-rsfa_22q_nuls_long$variable <- factor(rsfa_22q_nuls_long$variable,levels=nmap_order,ordered=TRUE)
+rsfa_22q_nuls_long$variable <- factor(rsfa_22q_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
 
 netho_22q_nuls_long <- melt.data.table(as.data.table(netho_22q_nmap_p$nulls), id.vars="perm")
-netho_22q_nuls_long$variable <- factor(netho_22q_nuls_long$variable,levels=nmap_order,ordered=TRUE)
+netho_22q_nuls_long$variable <- factor(netho_22q_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
 
 gbc_22q_nuls_long <- melt.data.table(as.data.table(gbc_22q_nmap_p$nulls), id.vars="perm")
-gbc_22q_nuls_long$variable <- factor(gbc_22q_nuls_long$variable,levels=nmap_order,ordered=TRUE)
+gbc_22q_nuls_long$variable <- factor(gbc_22q_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
   
-rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
-  geom_boxplot(outlier.shape=21)+
-  geom_point(data=rsfa_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+gbc_box <- ggplot(data=gbc_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50")+
+  geom_point(data=gbc_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
   scale_color_manual(values = c("tan","red"))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
-  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
   ylab("Pearson's r")+
   #ylab("")+
   #xlab("Brain Map Comparison")+
   xlab("")+
-  ggtitle("Brain Signal Variability")
+  ggtitle("Global Connectivity")+
+  theme(legend.position="none")
 
 netho_box <- ggplot(data=netho_22q_nuls_long, aes(y=value, x=variable))+
-  geom_boxplot(outlier.shape=21)+
+  geom_boxplot(outlier.shape=21, color="grey50")+
   geom_point(data=netho_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
   scale_color_manual(values = c("tan","red"))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
-  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
   ylab("Pearson's r")+
   #xlab("Brain Map Comparison")+
   xlab("")+
   ggtitle("Local Connectivity")
   
-gbc_box <- ggplot(data=gbc_22q_nuls_long, aes(y=value, x=variable))+
-  geom_boxplot(outlier.shape=21)+
-  geom_point(data=gbc_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+
+rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50")+
+  geom_point(data=rsfa_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
   scale_color_manual(values = c("tan","red"))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
   theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  #theme(axis.text.x = element_blank())+
   ylab("Pearson's r")+
   #ylab("")+
   xlab("Brain Map Comparison")+
-  ggtitle("Global Connectivity")+
-  theme(legend.position="none")
-  
-neuromaps_22q_bplots <- rsfa_box/netho_box/gbc_box+plot_layout(guides = "collect")
+  #xlab("")+
+  ggtitle("Brain Signal Variability")+
+  theme(plot.margin = unit(c(0,0,0,0.7),"in"))+
+  scale_x_discrete(labels=nmap_match$name)
+
+neuromaps_22q_bplots <- gbc_box/netho_box/rsfa_box+plot_layout(guides = "collect")
 neuromaps_22q_bplots
+
+ggsave(neuromaps_22q_bplots, file=file.path(project,"figures/neuromaps/neuromaps_22q_correlations.pdf"), device = "pdf", height = 8, width = 9)
 ```
 
 
