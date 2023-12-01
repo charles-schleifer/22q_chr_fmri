@@ -24,7 +24,7 @@ mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla
 if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
 
 # list packages to load
-packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","patchwork", "ggrepel", "ggpubr", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
+packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","gghalves","patchwork", "ggrepel", "ggpubr", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
 
 # install packages if not yet installed
 all_packages <- rownames(installed.packages())
@@ -1346,6 +1346,7 @@ netho_box <- ggplot(data=netho_22q_nuls_long, aes(y=value, x=variable))+
 
 rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50")+
+  #geom_half_violin(fill="grey50", side="r", lty="blank", alpha=0.5)+
   geom_point(data=rsfa_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
   scale_color_manual(values = c("tan","red"))+
   scale_shape_manual(values=c(18,16))+
