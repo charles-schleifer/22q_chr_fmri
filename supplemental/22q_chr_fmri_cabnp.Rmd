@@ -1,0 +1,1399 @@
+---
+title: "22q fMRI analysis"
+author: "C. Schleifer"
+date: "2022-09-30"
+output: html_document
+---
+
+# setup workspace
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# function to set up environment
+# clear workspace
+rm(list = ls(all.names = TRUE))
+
+# use SSHFS to mount hoffman2 server (download SSHFS for mac: https://osxfuse.github.io/)
+# TODO: set hoffman2 username
+uname <- "schleife"
+# set local path to mount server
+hoffman <- "~/Desktop/hoffman_mount"
+# create directory if needed 
+if(!file.exists(hoffman)){dir.create(hoffman)}
+# make string to run as system command
+mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla.edu:/u/project/cbearden/data ",hoffman)
+# if hoffman directory is empty, use system command and sshfs to mount server, if not empty assume already mounted and skip
+if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
+
+# list packages to load
+packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","gghalves","patchwork", "ggrepel", "ggpubr", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
+
+# install packages if not yet installed
+all_packages <- rownames(installed.packages())
+installed_packages <- packages %in% all_packages
+if (any(installed_packages == FALSE)){install.packages(packages[!installed_packages])}
+
+# load packages
+invisible(lapply(packages, library, character.only = TRUE))
+
+# install neuroComBat from github 
+# https://github.com/Jfortin1/neuroCombat_Rpackage
+#install_github("jfortin1/neuroCombatData")
+#install_github("jfortin1/neuroCombat_Rpackage")
+
+# use the filter function from dplyr, not stats
+conflict_prefer("filter", "dplyr")
+
+# get path to project repo directory
+project <- here()
+print(paste("Project directory:", project))
+
+# set up connectome workbench path for ciftiTools
+# https://www.humanconnectome.org/software/get-connectome-workbench
+# local wbpath (edit this path if workbench is installed in another location, e.g. on hoffman: /u/project/CCN/apps/hcp/current/workbench/bin_rh_linux64/)
+# TODO: edit if necessary
+wbpath <- "/Applications/workbench/bin_macosx64/"
+ciftiTools.setOption("wb_path", wbpath)
+
+# set local path to SSHFS mount point for hoffman:/u/project/cbearden/data
+# TODO: edit if necessary
+hoffman <- "~/Desktop/hoffman_mount/"
+
+# load rgl for ciftiTools visualization
+# may require XQartz v2.8.1 to be installed locally
+if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
+rgl::setupKnitr()
+rgl::rgl.open(); rgl::rgl.close()
+
+```
+
+get subject IDs and load demographic data
+```{r}
+# load CAB-NP network parcellation
+# https://github.com/ColeLab/ColeAnticevicNetPartition
+ji_key <- read.table(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_LabelKey.txt"),header=T)
+ji_net_keys <- ji_key[,c("NETWORKKEY","NETWORK")] %>% distinct %>% arrange(NETWORKKEY)
+# read cifti with subcortical structures labeled 
+xii_Ji_parcel <- read_cifti(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR.dscalar.nii"), brainstructures = "all")
+xii_Ji_network <- read_cifti(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_netassignments_LR.dscalar.nii"), brainstructures = "all")
+# read only surface parcels
+xii_Ji_parcel_surf <- read_cifti(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR.dscalar.nii"), brainstructures = c("left", "right"))
+
+# paths to sessions directories
+trio_dir <- file.path(hoffman,"22q/qunex_studyfolder/sessions")
+prisma_dir <- file.path(hoffman,"22qPrisma/qunex_studyfolder/sessions")
+suny_dir <- file.path(hoffman,"Enigma/SUNY/qunex_studyfolder/sessions")
+rome_dir <- file.path(hoffman,"Enigma/Rome/qunex_studyfolder/sessions")
+iop_dir <- file.path(hoffman,"Enigma/IoP/qunex_studyfolder/sessions")
+napls_dir <- file.path(hoffman,"NAPLS_BOLD/NAPLS2/sessions/S_sessions/")
+
+# get list of sessions
+trio_sessions <- list.files(trio_dir,pattern="Q_[0-9]")
+trio_sessions <- c("Q_0001_09242012", "Q_0001_10152010", "Q_0005_04182011", "Q_0007_04012011", "Q_0009_09292011", "Q_0016_03292011", "Q_0016_10082012", "Q_0020_03262012", "Q_0020_05052011", "Q_0021_01132011", "Q_0021_11052012", "Q_0024_04152011", "Q_0024_09212012", "Q_0026_03232012", "Q_0026_05032013", "Q_0033_03192010", "Q_0036_03302010", "Q_0036_06212012", "Q_0036_06282011", "Q_0037_04202011", "Q_0038_06042010", "Q_0039_04132010", "Q_0039_06012011", "Q_0041_09262012", "Q_0045_07132010", "Q_0045_08302011", "Q_0045_10052012", "Q_0051_01302012", "Q_0052_07302010", "Q_0053_08022010", "Q_0053_12212012", "Q_0054_08062010", "Q_0056_08252010", "Q_0056_09102012", "Q_0059_08032011", "Q_0062_11302011", "Q_0076_10212010", "Q_0077_02292012", "Q_0077_03112013", "Q_0077_10252010", "Q_0078_11102011", "Q_0080_11222010", "Q_0081_11242010", "Q_0082_01062012", "Q_0082_01112013", "Q_0082_12162010", "Q_0085_02242012", "Q_0091_03052012", "Q_0091_03072011", "Q_0092_03102011", "Q_0093_03082011", "Q_0093_03122012", "Q_0093_03122013", "Q_0098_04012011", "Q_0099_04012011", "Q_0100_04082011", "Q_0101_01032013", "Q_0101_04122011", "Q_0102_01032013", "Q_0102_04122011", "Q_0103_04182011", "Q_0103_08272012", "Q_0105_05022011", "Q_0109_05262011", "Q_0112_11142012", "Q_0114_11092012", "Q_0117_07062011", "Q_0117_08312012", "Q_0118_07072011", "Q_0124_07292011", "Q_0124_09172012", "Q_0127_03052013", "Q_0127_08012014", "Q_0127_08082011", "Q_0130_08132012", "Q_0130_08162011", "Q_0130_11042014", "Q_0132_08222011", "Q_0135_09012011", "Q_0141_10072013", "Q_0141_10092012", "Q_0146_11082012", "Q_0146_12072011", "Q_0147_08112015", "Q_0147_08142014", "Q_0147_12122011", "Q_0149_11192012", "Q_0149_12192011", "Q_0150_11192012", "Q_0150_12202011", "Q_0151_01122012", "Q_0153_01202012", "Q_0156_01312012", "Q_0156_12102013", "Q_0157_01312012", "Q_0159_02122013", "Q_0161_03012012", "Q_0161_04192013", "Q_0162_03202012", "Q_0163_03262012", "Q_0166_01092014", "Q_0166_04052012", "Q_0168_04052012", "Q_0169_04062012", "Q_0170_04102012", "Q_0170_11252014", "Q_0171_04102012", "Q_0171_11252014", "Q_0172_04122012", "Q_0172_04262013", "Q_0173_04122012", "Q_0173_04172014", "Q_0173_04262013", "Q_0174_04182012", "Q_0174_04272015", "Q_0176_04242012", "Q_0176_05072013", "Q_0177_05012012", "Q_0178_05012012", "Q_0182_05182012", "Q_0184_05242012", "Q_0185_05242012", "Q_0186_04092015", "Q_0188_05242012", "Q_0189_05242012", "Q_0190_06012012", "Q_0190_08132013", "Q_0196_06192015", "Q_0196_06202012", "Q_0196_09122013", "Q_0200_04032015", "Q_0200_08052013", "Q_0213_08032012", "Q_0215_08062012", "Q_0215_08172015", "Q_0216_08062012", "Q_0216_08172015", "Q_0217_01142014", "Q_0217_02042015", "Q_0217_08092012", "Q_0219_08122014", "Q_0219_08162012", "Q_0219_09012015", "Q_0222_08212012", "Q_0223_08212012", "Q_0227_10032012", "Q_0228_01292014", "Q_0228_09272012", "Q_0229_10022012", "Q_0232_12122012", "Q_0234_03252014", "Q_0234_12132012", "Q_0236_03072013", "Q_0238_03202013", "Q_0238_08042014", "Q_0238_11132015", "Q_0240_03232015", "Q_0240_03272013", "Q_0240_06262014", "Q_0242_03272013", "Q_0242_05162016", "Q_0244_09162013", "Q_0244_09232014", "Q_0246_09242013", "Q_0252_12102013", "Q_0255_10212014", "Q_0260_06092014", "Q_0260_10262015", "Q_0266_08122014", "Q_0268_10132014", "Q_0269_10142014", "Q_0277_12082014", "Q_0284_03182015", "Q_0285_03182015", "Q_0286_03182015", "Q_0291_04172015", "Q_0307_10132015", "Q_0310_11182015", "Q_0311_12082015", "Q_0315_01262016", "Q_0321_03232016", "Q_0322_03312016", "Q_0326_04142016", "Q_0327_04142016")
+#prisma_sessions <- list.files(prisma_dir,pattern="Q_[0-9]")
+prisma_sessions <- c("Q_0005_11072017", "Q_0017_10022017", "Q_0019_03022020", "Q_0036_08082017", "Q_0036_08312018", "Q_0036_09302019", "Q_0037_08152017", "Q_0041_10092017", "Q_0051_02032017", "Q_0105_03112020", "Q_0105_12032018", "Q_0114_12052017", "Q_0141_06122018", "Q_0141_08052019", "Q_0147_12112017", "Q_0147_12112018", "Q_0196_01082020", "Q_0213_05012017", "Q_0217_01242017", "Q_0217_02192020", "Q_0235_05252017", "Q_0238_02202018", "Q_0240_09192017", "Q_0240_11162018", "Q_0246_10092018", "Q_0246_10102017", "Q_0246_10142016", "Q_0260_06192017", "Q_0260_06242019", "Q_0260_06252018", "Q_0263_02252019", "Q_0263_02262018", "Q_0263_11072016", "Q_0271_10182016", "Q_0277_12132016", "Q_0278_11292017", "Q_0279_11302017", "Q_0279_12052019", "Q_0279_12132016", "Q_0285_03212017", "Q_0285_06062018", "Q_0286_03212017", "Q_0287_06062018", "Q_0289_03212017", "Q_0289_06062018", "Q_0291_11042016", "Q_0291_11302018", "Q_0304_12202016", "Q_0310_01252018", "Q_0310_02132017", "Q_0310_04292019", "Q_0319_03192018", "Q_0319_03282017", "Q_0321_03192018", "Q_0321_03272017", "Q_0324_04182018", "Q_0326_10202017", "Q_0326_12062018", "Q_0327_10192017", "Q_0327_12072018", "Q_0331_06102019", "Q_0331_06212018", "Q_0331_06272017", "Q_0333_04142017", "Q_0334_12012016", "Q_0336_01102017", "Q_0345_04122017", "Q_0345_08152018", "Q_0345_09112019", "Q_0346_04102017", "Q_0346_04102018", "Q_0348_04212017", "Q_0348_08152018", "Q_0350_04192017", "Q_0350_09142018", "Q_0353_04182018", "Q_0353_05022017", "Q_0355_05312018", "Q_0356_05312018", "Q_0361_10212019", "Q_0361_11202018", "Q_0369_04182018", "Q_0369_06182019", "Q_0371_08042020", "Q_0374_05252018", "Q_0381_08072018", "Q_0381_09102019", "Q_0382_08282018", "Q_0383_08282018", "Q_0387_08242018", "Q_0387_12032019", "Q_0390_09042018", "Q_0390_09302019", "Q_0391_09252018", "Q_0395_11062018", "Q_0397_10172019", "Q_0402_01112019", "Q_0404_03112019", "Q_0407_06122019", "Q_0408_05172019", "Q_0414_07172019", "Q_0415_07292019", "Q_0416_07292019", "Q_0425_11052019", "Q_0429_01092020", "Q_0432_02142020", "Q_0433_02262020", "Q_0443_06282021", "Q_0446_06152021", "Q_0459_08192021", "Q_0461_09112021", "Q_0484_01042022", "Q_0519_05312022", "Q_0520_06012022", "Q_0521_05202022", "Q_0525_06072022", "Q_0526_06242022", "Q_0527_07112022", "Q_0528_07202022", "Q_0529_07202022", "Q_0561_11032022", "Q_0568_10252022")
+# exclude Q_0390_09302019 for now due to no AP BOLD, and exclude two NAPLS subjects with no demographic info and 02_S0013_00 with some NAs in NetHo data (need to investigate further)
+exclude_sessions <- c("Q_0390_09302019","01_S0083_00","01_S0128_00","02_S0013_00")
+# for now also exclude several new sessions without rsfa calculated
+#exclude_sessions <- c("Q_0214_05012017","Q_0390_09302019","Q_0477_01052022","Q_0484_01042022","Q_0508_06232022","Q_0519_05312022","Q_0520_06012022","Q_0521_05202022","Q_0525_06072022","Q_0526_06242022","Q_0527_07112022","Q_0528_07202022","Q_0529_07202022","Q_0541_07182022","Q_0549_10182022","Q_0561_11032022","Q_0568_10252022")
+prisma_sessions <- prisma_sessions[! prisma_sessions %in% exclude_sessions]
+suny_sessions <- list.files(suny_dir,pattern="X[0-9]")
+iop_sessions <- list.files(iop_dir,pattern="GQAIMS[0-9]")
+rome_sessions <- c(list.files(rome_dir, pattern="C[0-9]"),list.files(rome_dir, pattern="D[0-9]"))
+#napls_sessions <- list.files(napls_dir,pattern="[0-9]_")
+# get only baseline napls
+napls_sessions <- list.files(napls_dir,pattern="_00$")
+napls_sessions <- napls_sessions[! napls_sessions %in% exclude_sessions]
+
+all_sessions <- c(trio_sessions,prisma_sessions,suny_sessions,rome_sessions,iop_sessions, napls_sessions)
+
+# read multisite demo table
+demo_multisite <- read.csv(file.path(project,"demographics/multisite/22q_multisite_demo_f31.csv"))
+# exclude listed sessions if any are in list
+#demo_multisite <- demo_multisite[! demo_multisite$MRI_S_ID %in% exclude_sessions,]
+# include only subject with mri
+demo_multisite <- filter(demo_multisite, MRI_S_ID %in% all_sessions)
+# subset to baseline
+demo_multisite_bl <- filter(demo_multisite, visit_index==1)
+# filter age
+demo_multisite_bl <- filter(demo_multisite_bl, AGE >= 8 & AGE <= 45)
+
+# read NAPLS baseline demographics
+demo_napls_bl <- read.csv(file.path(project,"demographics/NAPLS/NAPLS_ClientInfo_13Jan2016nocommas.csv"))
+# match napls MRI_S_IDs to demo table
+napls_id_split <- strsplit(napls_sessions, split="_") %>% do.call(rbind,.) %>% as.data.frame
+napls_id_split$MRI_S_ID <- napls_sessions
+napls_id_bl <- filter(napls_id_split, V3=="00")
+napls_id_match <- data.frame(MRI_S_ID=napls_id_bl$MRI_S_ID, SiteNumber=as.numeric(napls_id_bl$V1), SubjectNumber=as.numeric(gsub("S","",napls_id_bl$V2)))
+# merge with demo
+demo_napls_id <- merge(x=demo_napls_bl, y=napls_id_match, by=c("SiteNumber","SubjectNumber"), all.y=TRUE)
+
+# make df with basic demographics across all 22q and NAPLS
+# first add napls data
+demo_napls=data.frame(MRI_S_ID=demo_napls_id$MRI_S_ID,
+                      Group=demo_napls_id$SubjectType,
+                      AGE=demo_napls_id$demo_age_ym,
+                      SEX=demo_napls_id$demo_sex,
+                      Site=demo_napls_id$SiteNumber)
+demo_napls$Site <- paste0("NAPLS",demo_napls$Site)
+demo_napls$SEX <-  factor(demo_napls$SEX,levels=c(1,2),labels=c("M","F"))
+demo_napls$Group <- factor(demo_napls$Group,levels=c("Prodromal","Control"),labels=c("CHR","CONTROL-N"))
+# then add 22q data
+demo_22q=data.frame(MRI_S_ID=demo_multisite_bl$MRI_S_ID,
+                      Group=demo_multisite_bl$SUBJECT_IDENTITY,
+                      AGE=demo_multisite_bl$AGE,
+                      SEX=demo_multisite_bl$SEX,
+                      Site=demo_multisite_bl$Site)
+demo_22q$SEX <-  factor(demo_22q$SEX,levels=c("M","F"),labels=c("M","F"))
+demo_22q$Group <- factor(demo_22q$Group,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
+# combine
+demo_22q_napls <- rbind(demo_22q, demo_napls)
+# get age squared column for regression
+demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
+```
+
+add converter label for NAPLS2
+```{r}
+converters <- read_xlsx(file.path(project,"demographics/NAPLS/converters.xlsx"))
+convert_ids <- merge(x=converters, y=napls_id_match, by=c("SiteNumber","SubjectNumber"))
+demo_22q_napls$GroupConvert <- as.character(demo_22q_napls$Group)
+demo_22q_napls[which(demo_22q_napls$MRI_S_ID %in% convert_ids$MRI_S_ID),"GroupConvert"] <- "CHRc"
+demo_22q_napls$GroupConvert %<>% as.factor
+```
+
+load movement data
+```{r}
+## get movement info
+# function to get mapping between boldn and run name from session_hcp.txt
+get_boldn_names <- function(sesh,sessions_dir){
+  hcptxt <- read.table(file.path(sessions_dir,sesh,"session_hcp.txt"),sep=":",comment.char="#",fill=T,strip.white=T,col.names=c(1:4)) %>% as.data.frame()
+  hcpbolds <- hcptxt %>% filter(grepl("bold[0-9]",X2))
+  df_out <- cbind(rep(sesh,times=nrow(hcpbolds)),hcpbolds$X2,hcpbolds$X3)
+  colnames(df_out) <- c("sesh","bold_n","bold_name")
+  return(df_out)
+}
+
+# function to get %udvarsme from images/functional/movement/boldn.scrub
+get_percent_udvarsme <- function(sesh,sessions_dir,bold_name_use){
+  mov_dir <- file.path(sessions_dir,sesh,"images/functional/movement")
+  sesh_bolds <- get_boldn_names(sesh=sesh,sessions_dir=sessions_dir) %>% as.data.frame %>% filter(bold_name == bold_name_use)
+  if(nrow(sesh_bolds) > 0){
+    boldns_use <- sesh_bolds$bold_n %>% as.vector
+    for(i in 1:length(boldns_use)){
+      boldn <- boldns_use[i] %>% as.character
+      boldn_path <- file.path(mov_dir,paste(boldn,".scrub",sep=""))
+      mov_scrub <- read.table(boldn_path, header=T)
+      percent_udvarsme <- (sum(mov_scrub$udvarsme == 1)/length(mov_scrub$udvarsme)*100) %>% as.numeric %>% signif(3)
+      percent_use <- (sum(mov_scrub$udvarsme == 0)/length(mov_scrub$udvarsme)*100) %>% as.numeric %>% signif(3)
+      df_out <- cbind(sesh,boldn,bold_name_use,percent_udvarsme,percent_use)
+      colnames(df_out) <- c("sesh","bold_n","bold_name","percent_udvarsme","percent_use")
+      return(df_out)
+    }
+  }
+}
+
+# get trio movement
+percent_udvarsme_trio <- lapply(trio_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=trio_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
+# get prisma movement
+percent_udvarsme_prisma <- lapply(prisma_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=prisma_dir,bold_name_use="restingAP")) %>% do.call(rbind,.) %>% as.data.frame
+# get rome movement
+percent_udvarsme_rome <- lapply(rome_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=rome_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
+# get suny movement
+percent_udvarsme_suny <- lapply(suny_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=suny_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
+# get iop movement
+percent_udvarsme_iop <- lapply(iop_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=iop_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
+# get NAPLS movement
+percent_udvarsme_napls <- lapply(napls_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=napls_dir,bold_name_use="RESTING")) %>% do.call(rbind,.) %>% as.data.frame
+
+# combine
+percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop, percent_udvarsme_napls)
+percent_udvarsme_all$percent_udvarsme <- as.numeric(percent_udvarsme_all$percent_udvarsme)
+percent_udvarsme_all$percent_use <- as.numeric(percent_udvarsme_all$percent_use)
+percent_udvarsme_all$MRI_S_ID <- percent_udvarsme_all$sesh
+
+# add movement to demo bl
+demo_multisite_bl <- merge(x=demo_multisite_bl, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+```
+
+load fMRI data
+```{r}
+# read CSV results
+# function to read parcellated results and add columns for roi pair name, site, and ID 
+read_csv_results <- function(sdir, fname, sesh, site){
+  input <- read.csv(file.path(sdir,sesh,"images/functional",fname))
+  session <- rep(sesh, times=nrow(input)) %>% as.data.frame
+  site <- rep(site, times=nrow(input)) %>% as.data.frame
+  new_cols <- cbind(session,site)
+  colnames(new_cols) <- c("MRI_S_ID","site")
+  output <- cbind(input,new_cols)
+  return(output)
+}
+
+## file name to look for
+# RSFA
+rsfa_name <- "resting_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+rsfa_name_prisma <- "restingAP_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+rsfa_name_napls <- "RESTING_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+
+# local connectivity
+netho_name <- "resting_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+netho_name_prisma <- "restingAP_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+netho_name_napls <- "RESTING_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
+
+# between parcel connectivity
+bparc_name <- "resting_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
+bparc_name_prisma <- "restingAP_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
+bparc_name_napls <- "RESTING_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
+
+# read rsfa
+trio_rsfa <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=rsfa_name)) %>% do.call(rbind,.)
+prisma_rsfa <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=rsfa_name_prisma)) %>% do.call(rbind,.)
+suny_rsfa <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=rsfa_name)) %>% do.call(rbind,.)
+rome_rsfa <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=rsfa_name)) %>% do.call(rbind,.)
+iop_rsfa <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=rsfa_name)) %>% do.call(rbind,.)
+napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=rsfa_name_napls)) %>% do.call(rbind,.)
+
+rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
+rsfa_all$INDEX %<>% as.numeric
+rsfa_all$t_sd %<>% as.numeric
+rsfa_all$t_mean %<>% as.numeric
+
+# read local connectivity
+trio_netho <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=netho_name)) %>% do.call(rbind,.)
+prisma_netho <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=netho_name_prisma)) %>% do.call(rbind,.)
+suny_netho <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=netho_name)) %>% do.call(rbind,.)
+rome_netho <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=netho_name)) %>% do.call(rbind,.)
+iop_netho <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=netho_name)) %>% do.call(rbind,.)
+napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=netho_name_napls)) %>% do.call(rbind,.)
+
+netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
+netho_all$INDEX %<>% as.numeric
+netho_all$NetHo %<>% as.numeric
+
+# function to convert parcellated fc matrix to global fc by getting the average connectivity for each ROI
+gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r_Fz", key=ji_key){
+  # get unique rois
+  rois <- unique(c(mat[,col1],mat[,col2]))
+  # make df to filter (rename chosen columns to "col1" and "col2" to easily reference in filter command)
+  dat <- mat
+  dat$col1 <- dat[,col1]
+  dat$col2 <- dat[,col2]
+  dat[,variable] %<>% as.numeric
+  # get subject ID and site
+  id <- unique(dat$MRI_S_ID)
+  site <- unique(dat$site)
+  if(length(id)>1){
+    stop("Error: more than one MRI ID in input data")
+  }
+  # make output df with one row per roi
+  out <- data.frame(INDEX=rois)
+  # get mean fc for each roi
+  for(r in rois){
+    rows <- filter(dat, col1==r | col2==r)
+    gbc <- mean(rows[,variable]) 
+    out[which(out$INDEX==r),"GBC"] <- gbc
+  }
+  out <- merge(x=out, y=key, by="INDEX", all.y=TRUE)
+  out$MRI_S_ID <- id
+  out$site <- site
+  return(out)
+}
+
+# read between parcel fc
+trio_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=bparc_name))) %>% do.call(rbind,.)
+prisma_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=bparc_name_prisma))) %>% do.call(rbind,.)
+suny_gbc <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=bparc_name))) %>% do.call(rbind,.)
+rome_gbc <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=bparc_name))) %>% do.call(rbind,.)
+iop_gbc <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=bparc_name))) %>% do.call(rbind,.)
+napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls))) %>% do.call(rbind,.)
+
+gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
+gbc_all$INDEX %<>% as.numeric
+gbc_all$GBC %<>% as.numeric
+
+```
+
+Notes on NAPLS QC: 
+multiple things to fix in input data
+NetHo data initially had NAs as well as inf values
+- NA in all "Frontoparietal-29_R-Cerebellum" and "Visual1-04_R-Accumbens" --> check size?
+- several subjects have multiple NA (those excluded for short BOLDs marked with *):
+  - 02_S0077_00 (700) *
+  - 08_S0081_00 (362) *
+  - 01_S0074_00 (166) *
+  - 08_S0057_00 (11) *
+  - 02_S0013_00 (5) - structural QC looks OK
+  - 03_S0122_00 (5) - structural QC missing regions including parts of temporal lobe
+- several subjects have infinite NetHo values for multiple parcels, and all overlap with cases with multiple NAs
+  - 01_S0074_00 (157) *
+  - 02_S0077_00 (11) *
+  - 08_S0057_00 (141) *
+  - 08_S0081_00 (130) *
+02_S0077_00 GBC is NA for all parcels *
+
+get info about netho NA parcels
+```{r}
+# ged indices
+r1 <- filter(ji_key, LABEL=="Frontoparietal-29_R-Cerebellum")$INDEX
+r2 <- filter(ji_key, LABEL=="Visual1-04_R-Accumbens")$INDEX
+#
+which(xii_Ji_parcel$data$subcort==r1)
+which(xii_Ji_parcel$data$subcort==r2)
+# both ROIs assigned NA in NetHo analysis have one single voxel and thus can not calculate NetHo
+# need to remove NA rows without disrupting 
+
+# filter NAs from NetHo
+netho_no_na <- filter(netho_all, !is.na(NetHo))
+```
+  
+save workspace with initial data
+```{r paged.print=FALSE}
+# save list of packages
+setwd(project)
+sink("package_versions.txt")
+sessionInfo()
+sink()
+
+# save image
+save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
+```
+
+reload NAPLS data and save
+```{r}
+# napls_sessions <- list.files(napls_dir,pattern="_00$")
+# napls_sessions <- napls_sessions[! napls_sessions %in% exclude_sessions]
+# all_sessions <- c(trio_sessions,prisma_sessions,suny_sessions,rome_sessions,iop_sessions, napls_sessions)
+# 
+# demo_napls=data.frame(MRI_S_ID=demo_napls_id$MRI_S_ID,
+#                       Group=demo_napls_id$SubjectType,
+#                       AGE=demo_napls_id$demo_age_ym,
+#                       SEX=demo_napls_id$demo_sex,
+#                       Site=demo_napls_id$SiteNumber)
+# demo_napls$Site <- paste0("NAPLS",demo_napls$Site)
+# demo_napls$SEX <-  factor(demo_napls$SEX,levels=c(1,2),labels=c("M","F"))
+# demo_napls$Group <- factor(demo_napls$Group,levels=c("Prodromal","Control"),labels=c("CHR","CONTROL"))
+# demo_22q=data.frame(MRI_S_ID=demo_multisite_bl$MRI_S_ID,
+#                       Group=demo_multisite_bl$SUBJECT_IDENTITY,
+#                       AGE=demo_multisite_bl$AGE,
+#                       SEX=demo_multisite_bl$SEX,
+#                       Site=demo_multisite_bl$Site)
+# demo_22q$SEX <-  factor(demo_22q$SEX,levels=c("M","F"),labels=c("M","F"))
+# demo_22q$Group <- factor(demo_22q$Group,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
+# demo_22q_napls <- rbind(demo_22q, demo_napls)
+# demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
+# 
+# percent_udvarsme_napls <- lapply(napls_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=napls_dir,bold_name_use="RESTING")) %>% do.call(rbind,.) %>% as.data.frame
+# percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop, percent_udvarsme_napls)
+# percent_udvarsme_all$percent_udvarsme <- as.numeric(percent_udvarsme_all$percent_udvarsme)
+# percent_udvarsme_all$percent_use <- as.numeric(percent_udvarsme_all$percent_use)
+# percent_udvarsme_all$MRI_S_ID <- percent_udvarsme_all$sesh
+# demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+# 
+# napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=rsfa_name_napls)) %>% do.call(rbind,.)
+# rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
+# rsfa_all$INDEX %<>% as.numeric
+# rsfa_all$t_sd %<>% as.numeric
+# rsfa_all$t_mean %<>% as.numeric
+# 
+# napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=netho_name_napls)) %>% do.call(rbind,.)
+# netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
+# netho_all$INDEX %<>% as.numeric
+# netho_all$NetHo %<>% as.numeric
+# 
+# napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls))) %>% do.call(rbind,.)
+# gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
+# gbc_all$INDEX %<>% as.numeric
+# gbc_all$GBC %<>% as.numeric
+# 
+# save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
+
+```
+
+
+harmonize sites with neurocombat
+need to harmonize separately for each measure (rsfa, local connectivity, global connectivity)
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# function to run neurocombat (includes study defaults)
+run_neurocombat <- function(input, 
+                            var_column, 
+                            site_column="Site",
+                            formula="INDEX ~ MRI_S_ID",
+                            covars=c("Group","AGE","AGE2","SEX","percent_udvarsme"),
+                            model="~Group + AGE + AGE2 + SEX + percent_udvarsme",
+                            #covars=c("AGE","AGE2","SEX","percent_udvarsme"),
+                            #model="~AGE + AGE2 + SEX + percent_udvarsme",
+                            index_col="INDEX", 
+                            id_col="MRI_S_ID", 
+                            demo=demo_22q_napls){
+  # remove site column from input and replace with demo
+  input <- subset(input, select=-site)
+  input <- merge(x=input, y=demo[,c("MRI_S_ID","Site")], by="MRI_S_ID", all.x=TRUE)
+  # get list of indices
+  indices <- unique(input$INDEX)
+  # cast to wide so that rows are parcel indices and columns are MRI_S_IDs
+  data.table::setDT(input)
+  input_subcols <- reshape2::dcast(data=input, formula=formula, value.var=var_column) 
+  # get subject ids in order of columns
+  subcols <- which(names(input_subcols)!= index_col)
+  subnames <- names(input_subcols)[subcols]
+
+    # get covariates from multisite baseline demo df, ordered the same as subject ID columns for input to neurocombat
+  covardf <- merge(x=data.frame(subnames), y=demo[,c(covars,site_column,id_col)], by.x="subnames", by.y=id_col, all.x=TRUE)
+  # drop unused groups to avoid unnecessary factors in model
+  covardf$Group %<>% droplevels()
+  
+  # run neurocombat for parcellated RSFA with site as batch variable and AGE and SEX included in the model
+  # using default parametric model (this paper shows parametric prior estimates outperform non-parametric in neurocombat: https://www.sciencedirect.com/science/article/pii/S2666956022000605)
+  #model_matrix <- model.matrix(~covardf$AGE + covardf$AGE2 + covardf$SEX + covardf$percent_udvarsme)
+  model_matrix <- model.matrix(formula(model),data=covardf[covars])
+  #print(summary(as.factor(covardf[,site_column])))
+  combat <- neuroCombat(dat=input_subcols[,subcols], batch=covardf[,site_column], mod=model_matrix, parametric=TRUE, eb=TRUE, verbose=FALSE)
+  
+  # convert combat results  back to long df
+  combat_d <- combat$dat.combat %>% as.data.frame
+  data.table::setDT(combat_d)
+  combat_d$INDEX <- indices
+  combat_d$INDEX %<>% as.numeric
+  combat_l <- melt.data.table(combat_d, id.vars="INDEX") %>% rename("MRI_S_ID"="variable")
+  # merge with input data
+  out <- merge(x=input, y=combat_l, by=c("INDEX", "MRI_S_ID"), all.x=TRUE, all.y=TRUE)
+  return(out)
+}
+
+# TODO: address outliers before comBat?
+
+# use only cortical regions
+rsfa_ctx <- filter(rsfa_all, INDEX %in% 1:360)
+netho_ctx <- filter(netho_no_na, INDEX %in% 1:360)
+gbc_ctx <- filter(gbc_all, INDEX %in% 1:360)
+
+# run combat
+rsfa_combat_22q <- run_neurocombat(input=filter(rsfa_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="t_sd")
+rsfa_combat_napls <- run_neurocombat(input=filter(rsfa_ctx, site=="NAPLS2"), var_column="t_sd")
+#rsfa_combat <- rbind(rsfa_combat_22q,rsfa_combat_napls)
+
+netho_combat_22q <- run_neurocombat(input=filter(netho_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="NetHo")
+netho_combat_napls <- run_neurocombat(input=filter(netho_ctx, site=="NAPLS2"), var_column="NetHo")
+#netho_combat <- rbind(netho_combat_22q,netho_combat_napls)
+
+gbc_combat_22q <- run_neurocombat(input=filter(gbc_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="GBC")
+gbc_combat_napls <- run_neurocombat(input=filter(gbc_ctx, site=="NAPLS2"), var_column="GBC")
+#gbc_combat <- rbind(gbc_combat_22q,gbc_combat_napls)
+
+#netho_combat <- run_neurocombat(input=netho_no_na, var_column="NetHo")
+#gbc_combat <- run_neurocombat(input=gbc_all, var_column="GBC")
+
+```
+
+normalize based on control group
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# function to get mean and standard dev of hcs for a given parcel to use for normalization
+# takes as input, a long data frame e.g. gbc_combat, vectors of control IDs, and the desired parcel index 
+get_hc_stats <- function(df, hcs_ids, parc){
+  dfh <- filter(df, MRI_S_ID %in% hcs_ids & INDEX == parc)
+  m <- mean(as.numeric(dfh$value))
+  s <- sd(as.numeric(dfh$value))
+  out <- data.frame(parcel_hc_mean=m, parcel_hc_sd=s)
+  return(out)
+}
+
+# function to normalize based on hc mean and sd
+hc_normalize <- function(df, hcs_ids){
+  # first get hc stats for all parcels
+  inds <- unique(df$INDEX)
+  hc_stats <- lapply(inds, function(p) get_hc_stats(parc=p, df=df, hcs_ids=hcs_ids)) %>% do.call(rbind,.)
+  hc_stats$INDEX <- inds
+  # then merge parcel norms with full df
+  dfn <- merge(x=df, y=hc_stats, by="INDEX", all.x=TRUE)
+  # normalize data in each parcel based on control mean and sd for that parcel
+  dfn$value_normed <- (dfn$value - dfn$parcel_hc_mean)/dfn$parcel_hc_sd
+  return(dfn)
+}
+
+# get list of all controls
+hc_ids <- filter(demo_22q_napls, Group=="CONTROL")$MRI_S_ID
+hcn_ids <- filter(demo_22q_napls, Group=="CONTROL-N")$MRI_S_ID
+
+# normalize each measure
+rsfa_norm_22q <- hc_normalize(df=rsfa_combat_22q, hcs_ids=hc_ids)
+rsfa_norm_napls <- hc_normalize(df=rsfa_combat_napls, hcs_ids=hcn_ids)
+rsfa_norm <- rbind(rsfa_norm_22q, rsfa_norm_napls)
+
+netho_norm_22q <- hc_normalize(df=netho_combat_22q, hcs_ids=hc_ids)
+netho_norm_napls <- hc_normalize(df=netho_combat_napls, hcs_ids=hcn_ids)
+netho_norm <- rbind(netho_norm_22q,netho_norm_napls)
+
+gbc_norm_22q <- hc_normalize(df=gbc_combat_22q, hcs_ids=hc_ids)
+gbc_norm_napls <- hc_normalize(df=gbc_combat_napls, hcs_ids=hcn_ids)
+gbc_norm <- rbind(gbc_norm_22q,gbc_norm_napls)
+
+```
+
+plot pre/post combat
+```{r}
+# function to plot pre and post combat
+plot_combat <- function(df, raw_col, title=""){
+  # get mean of all parcels per subject pre/post combat to look at distributions
+  subs <- sort(unique(df$MRI_S_ID))
+  sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
+  precombat <- lapply(sublist, function(s) mean(s[,raw_col])) %>% do.call(rbind,.)
+  postcombat <- lapply(sublist, function(s) mean(s$value)) %>% do.call(rbind,.)
+  parc_means <- data.frame(MRI_S_ID=subs, postcombat=as.vector(postcombat), precombat=as.vector(precombat))
+  # add site
+  df$duplicated <- duplicated(df$MRI_S_ID)
+  dup <- filter(df, duplicated==FALSE)[,c("MRI_S_ID","Site")]
+  parc_means_demo <- merge(x=parc_means, y=dup, by="MRI_S_ID")
+  parc_means_demo$Site %<>% as.factor
+  print(nrow(parc_means))
+  print(nrow(parc_means_demo))
+  # plot meean RSFA distributions by site pre combat
+  pl_precombat <- ggplot(parc_means_demo, aes(precombat, fill=Site, after_stat(count)))+
+    geom_density(kernel="gaussian", alpha=0.5)+
+    scale_fill_manual(values=rainbow(13))+
+    theme_classic()+
+    ggtitle(paste("pre-combat",title))
+  
+  # plot meean RSFA distributions by site post combat
+  pl_postcombat <- ggplot(parc_means_demo, aes(postcombat, fill=Site, after_stat(count)))+
+    geom_density(kernel="gaussian", alpha=0.5)+ 
+    scale_fill_manual(values=rainbow(13))+
+    theme_classic()+
+    ggtitle(paste("post-combat",title))
+  
+  ggarrange(pl_precombat,pl_postcombat, nrow=1, common.legend=T,legend="right")
+}
+
+
+plot_normed <- function(df, name){
+  # get mean of all parcels per subject pre/post combat to look at distributions
+  subs <- sort(unique(df$MRI_S_ID))
+  sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
+  values <- lapply(sublist, function(s) mean(s$value_normed)) %>% do.call(rbind,.)
+  normed <- data.frame(MRI_S_ID=subs, normed=as.vector(values))
+  # add site
+  df$duplicated <- duplicated(df$MRI_S_ID)
+  dup <- filter(df, duplicated==FALSE)[,c("MRI_S_ID","Site")]
+  normed_demo <- merge(x=normed, y=dup, by="MRI_S_ID")
+  normed_demo$Site %<>% as.factor
+  print(nrow(normed_demo))
+  print(nrow(normed_demo))
+  # plot meean RSFA distributions by site post combat
+  pl_postcombat <- ggplot(normed_demo, aes(normed, fill=Site, after_stat(count)))+
+  geom_density(kernel="gaussian", alpha=0.5)+ 
+  #scale_fill_manual(values=rainbow(13))+
+  theme_classic()+
+  ggtitle(paste(name,"normed"))
+  return(pl_postcombat)
+}
+
+norm_plot_rsfa <- plot_normed(rsfa_norm, name="rsfa")
+norm_plot_rsfa
+
+norm_plot_netho <- plot_normed(netho_norm, name="NetHo")
+norm_plot_netho
+
+norm_plot_gbc <- plot_normed(gbc_norm, name="gbc")
+norm_plot_gbc
+
+combat_plot_rsfa <- plot_combat(df=rsfa_norm, raw_col="t_sd", title="RSFA")
+combat_plot_netho <- plot_combat(df=netho_norm, raw_col="NetHo", title="NetHo")
+combat_plot_gbc <- plot_combat(df=gbc_norm, raw_col="GBC", title="GBC")
+
+combat_plot_rsfa
+combat_plot_netho
+combat_plot_gbc
+
+
+```
+
+convert normed combat results back to wide df merged with demographics
+```{r}
+# function to convert long to wide df with indices (renamed to r_index) as columns
+rows_to_cols <- function(results, demo, index_colname="INDEX"){
+  df <- as.data.frame(results)
+  # add prefix "r_" to parcel indices to use as column names in wide df 
+  df$index_col <- paste0("r_",df[,index_colname])
+  # cast to wide to merge with demographics
+  dt <- data.table::setDT(df)
+  # list of new column names
+  parc_cols <- unique(dt$index_col)
+  # make wide df with column from MRI_S_ID and one column per parcel with cells containing normed combat value
+  dt_wide <- reshape2::dcast(dt, MRI_S_ID ~ index_col, value.var="value_normed") 
+  # order cols
+  dt_wide_order <- dt_wide[,c("MRI_S_ID", parc_cols)]
+  # merge with demo table 
+  dt_demo <- merge(x=demo, y=dt_wide_order, by="MRI_S_ID") 
+  # return both the data frame and list of results columns
+  out <- list(parcels=as.vector(parc_cols), df=as.data.frame(dt_demo))
+  return(out)
+}
+
+# get list objects with vector of results column names and demo df merged to results
+rsfa_wide <- rows_to_cols(results=rsfa_norm, demo=demo_22q_napls)
+netho_wide <- rows_to_cols(results=netho_norm, demo=demo_22q_napls)
+gbc_wide <- rows_to_cols(results=gbc_norm, demo=demo_22q_napls)
+
+```
+
+
+test linear models for 22q vs TD and CHR vs TD separately
+```{r}
+# function to return beta coefficient for group in a lm predicting MRI from chosen predictors
+lm_parcel_group_covars <- function(df,var,predictors,groups,groupcol,refgroup){
+  # create formula with var on left side and predictors string on right
+  form <- reformulate(predictors,response=var)
+  #print(form)
+  #print(form)
+  # test linear model
+  lm <- lm(formula=form,data=df, na.action="na.omit")
+  slm <- summary(lm)
+  # get stats for main effect of group
+  g <- groups[which(groups != refgroup)]
+  gname <- paste0(groupcol,g)
+  g_stats <- slm$coefficients[gname,]
+  return(g_stats)
+}
+
+# function to apply lm at each parcel, expects list object output from rows_to_cols
+# defaults, including formula predictors, are set in function but different values can be specified
+# groups should be a vector specifying which groups should be ussed
+get_parcel_group_lm <- function(list, 
+                                groups, 
+                                groupcol="Group", 
+                                refgroup="CONTROL", 
+                                covars="AGE + AGE2 + SEX + Site + percent_udvarsme", 
+                                alpha=0.05, 
+                                roi_key=ji_key,
+                                prefix="r_"){
+  if(length(groups)!=2){ stop("Error: number of groups not equal to 2")}
+  # add group to string of model variables
+  predictors <- paste(groupcol, "+", covars)
+  # filter by specified groups and relevel factor
+  df_all <- as.data.frame(list$df)
+  df_all$groupcol <- df_all[,groupcol]
+  df <- filter(df_all, groupcol %in% groups)
+  df[,groupcol] <- relevel(df[,groupcol], ref=refgroup)
+  # do linear model for every parcel, FDR correct p-values, and create column of betas set to NA when not FDR significant
+  parc_cols <- list$parcels
+  stats <- lapply(parc_cols, function(v) lm_parcel_group_covars(var=v, df=df, predictors=predictors, groups=groups, groupcol=groupcol, refgroup=refgroup)) %>% do.call(rbind,.) %>% as.data.frame
+  colnames(stats) <- c("beta","se","t","p")
+  stats$FDR_q <- p.adjust(stats$p, method="fdr")
+  stats$FDR_sig <- stats$FDR_q < alpha
+  stats$beta_FDR <- stats$beta
+  stats$beta_FDR[which(stats$FDR_sig != TRUE)] <- NA
+  # add index column and merge with roi key (assumes column named INDEX in roi_key)
+  stats$indexcol <- parc_cols
+  stats$INDEX <- gsub(prefix,"",stats$indexcol)
+  out <- merge(x=roi_key, y=stats, by="INDEX", all.x=TRUE, all.y=TRUE)
+  return(out)
+}
+
+# get main effects of group for each measure
+rsfa_22q_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL")
+print(paste("RSFA 22q significant regions:",sum(rsfa_22q_lms$FDR_sig)))
+
+rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N")
+print(paste("RSFA CHR significant regions:",sum(rsfa_chr_lms$FDR_sig)))
+
+netho_22q_lms <- get_parcel_group_lm(list=netho_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL")
+print(paste("NetHo 22q significant regions:",sum(netho_22q_lms$FDR_sig, na.rm=TRUE)))
+
+netho_chr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N")
+print(paste("NetHo CHR significant regions:",sum(netho_chr_lms$FDR_sig, na.rm=TRUE)))
+
+gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL")
+print(paste("GBC 22q significant regions:",sum(gbc_22q_lms$FDR_sig)))
+
+gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N")
+print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$FDR_sig)))
+
+```
+test CHRc vs TD
+```{r}
+rsfa_chrc_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N")
+print(paste("RSFA CHRc significant regions:",sum(rsfa_chrc_lms$FDR_sig)))
+
+netho_chrc_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N")
+print(paste("NetHo CHRc significant regions:",sum(netho_chrc_lms$FDR_sig)))
+
+gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N")
+print(paste("GBC CHRc significant regions:",sum(gbc_chrc_lms$FDR_sig)))
+
+```
+
+save workspace with full data
+```{r paged.print=FALSE}
+# save image
+save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
+```
+
+
+plot group difference maps
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# function to take xifti atlas (with ROIs denoted by unique values) and return list of xifti matrix indices by brain structure for each ROI
+get_roi_atlas_inds <- function(xii){
+  # get all unique roi labels
+  mxii <- as.matrix(xii)
+  vals <- mxii %>% unique %>% sort %>% as.numeric
+  # get brain structures to iterate through (cortex_left, cortex_right, subcort)
+  xiinames <- names(xii$data)
+  # for each ROI, get the indices for each brain structure
+  # output is a nested list for each ROI (with "r_" added as prefix) and each brain structure, containing an array of xifti indices corresponding to the ROI in a given brain structure
+  out <- lapply(setNames(vals,paste0("r_",vals)), function(v) lapply(setNames(xiinames,xiinames), function(n) which(xii$data[[n]] == v)))
+  return(out)
+}
+
+# function to create xifti for plotting ROI values on a brain atlas
+# input atlas xifti and data frame with at least two cols corresponding to ROI IDs (roi_col) and output values (val_col) e.g. gene expression or functional connectivity
+# output modified atlas xifti with ROI IDs replaced with output values (for visualization)
+atlas_xifti_new_vals <- function(xii, df, roi_col, val_col){
+  # get list of xifti indices for each ROI
+  inds <- get_roi_atlas_inds(xii)
+  # create blank xii from atlas
+  xii_out <- xii
+  for (struct in names(xii_out$data)){
+    if (!is.null(xii_out$data[[struct]])){
+      xii_out$data[[struct]] <- as.matrix(rep(NA,times=nrow(xii_out$data[[struct]])))
+    }
+  }
+  # create new column named roilabel from roi_col
+  df$roilabel <- df[,roi_col]
+  # for each roi in xii, set all relevant vertices to value from val_col based on roi_col
+  for (roi in names(inds)){
+    #print(roi)
+    # get value for roi
+    out_val <- as.numeric(filter(df[,c("roilabel",val_col)], roilabel==gsub("r_","",roi))[val_col])
+    #print(out_val)
+    # loop through brain structures, if ROI has any indices in a structure, set those to the output value
+    for (struct in names(inds[[roi]])){
+      roi_inds <- inds[[roi]][[struct]]
+      l <- length(roi_inds)
+      if (l > 0){
+        xii_out$data[[struct]][roi_inds] <- out_val
+      }
+    }
+  }
+  return(xii_out)
+}
+
+# color pals for brain plots
+# set up rcolorbrewer palettes
+pal_red_yellow_blue <- function(){
+  pal <- "RdYlBu"
+  ncolors <- 1000
+  mycolors <- rev(colorRampPalette(brewer.pal(11,pal))(ncolors))
+  return(mycolors)
+}
+
+pal_red_blue <- function(){
+  pal <- "RdBu"
+  ncolors <- 1000
+  mycolors <- rev(colorRampPalette(brewer.pal(11,pal))(ncolors))
+  return(mycolors)
+}
+
+pal_yellow_orange_red <- function(){
+  pal <- "YlOrRd"
+  ncolors <- 1000
+  mycolors <- colorRampPalette(brewer.pal(9,pal))(ncolors)
+  return(mycolors)
+}
+
+# plot group difference beta only fdr<0.05
+# 22q RSFA
+pl_rsfa_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta_FDR")
+view_xifti_surface(pl_rsfa_22q_b_fdr, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# 22q NetHo
+pl_netho_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="beta_FDR")
+view_xifti_surface(pl_netho_22q_b_fdr, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# 22q GBC
+pl_gbc_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta_FDR")
+view_xifti_surface(pl_gbc_22q_b_fdr, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# plot group difference beta 
+# 22q RSFA
+pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# 22q NetHo
+pl_netho_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_netho_22q_b, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# 22q GBC
+pl_gbc_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_gbc_22q_b, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+
+# plot CHR netho FDR beta
+# chr NetHo
+pl_netho_chr_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="beta_FDR")
+view_xifti_surface(pl_netho_chr_b_fdr, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+
+# plot CHR threshold free beta
+# chr RSFA
+pl_rsfa_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_chr_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_rsfa_chr_b, title="Signal Variablity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# chr NetHo
+pl_netho_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_netho_chr_b, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# chr GBC
+pl_gbc_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_chr_lms, roi_col="INDEX", val_col="beta")
+view_xifti_surface(pl_gbc_chr_b, title="Global Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+
+```
+
+write files for brainsmash null model generation
+needs separate txt files per hemisphere with values ordered by ascending parcel ID
+```{r}
+# RSFA Left cortex
+rsfa_22q_lms_L <- filter(rsfa_22q_lms, INDEX <= 180)
+rsfa_22q_lms_L_b <- rsfa_22q_lms_L[order(rsfa_22q_lms_L$INDEX),"beta"]
+#write.table(rsfa_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# RSFA Right cortex
+rsfa_22q_lms_R <- filter(rsfa_22q_lms, INDEX > 180 & INDEX <= 360)
+rsfa_22q_lms_R_b <- rsfa_22q_lms_R[order(rsfa_22q_lms_R$INDEX),"beta"]
+#write.table(rsfa_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# RSFA subcortex
+rsfa_22q_lms_SC <- filter(rsfa_22q_lms, INDEX > 360)
+rsfa_22q_lms_SC_b <- rsfa_22q_lms_SC[order(rsfa_22q_lms_SC$INDEX),"beta"]
+#write.table(rsfa_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# NetHo Left cortex
+netho_22q_lms_L <- filter(netho_22q_lms, INDEX <= 180)
+netho_22q_lms_L_b <- netho_22q_lms_L[order(netho_22q_lms_L$INDEX),"beta"]
+#write.table(netho_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# NetHo Right cortex
+netho_22q_lms_R <- filter(netho_22q_lms, INDEX > 180 & INDEX <= 360)
+netho_22q_lms_R_b <- netho_22q_lms_R[order(netho_22q_lms_R$INDEX),"beta"]
+#write.table(netho_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# NetHo subcortex
+netho_22q_lms_SC <- filter(netho_22q_lms, INDEX > 360)
+netho_22q_lms_SC_b <- netho_22q_lms_SC[order(netho_22q_lms_SC$INDEX),"beta"]
+#write.table(netho_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# gbc Left cortex
+gbc_22q_lms_L <- filter(gbc_22q_lms, INDEX <= 180)
+gbc_22q_lms_L_b <- gbc_22q_lms_L[order(gbc_22q_lms_L$INDEX),"beta"]
+#write.table(gbc_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# gbc Right cortex
+gbc_22q_lms_R <- filter(gbc_22q_lms, INDEX > 180 & INDEX <= 360)
+gbc_22q_lms_R_b <- gbc_22q_lms_R[order(gbc_22q_lms_R$INDEX),"beta"]
+#write.table(gbc_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+# gbc subcortex
+gbc_22q_lms_SC <- filter(gbc_22q_lms, INDEX > 360)
+gbc_22q_lms_SC_b <- gbc_22q_lms_SC[order(gbc_22q_lms_SC$INDEX),"beta"]
+#write.table(gbc_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_GBC_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+
+```
+
+read brainsmash outputs
+```{r}
+# function to read brainsmash outputs, which are CSVs with one column per parcel and one row per shuffled brain
+# needs path to csv, vector of indices (e.g. 1:180 or 181:360), and a key dataframe
+# output will be key df merged with n brainsmash columns named V1:Vn, with rows not in indices set to NA
+read_brainsmash <- function(path, indices, key=ji_key){
+  df <- read.csv(path,header=FALSE)
+  # transpose so that rows are indices and columns are replicates
+  dft <- as.data.frame(t(df))
+  # add index column
+  dft$INDEX <- indices
+  rownames(dft) <- indices
+  # merge with key
+  out <- merge(x=dft, all.x=TRUE, y=key, all.y=TRUE, by="INDEX")
+  return(out)
+}
+
+rsfa_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_RSFA_L_permuted.csv"), indices=1:180)
+rsfa_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_RSFA_R_permuted.csv"), indices=181:360)
+netho_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_NetHo_L_permuted.csv"), indices=1:180)
+netho_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_NetHo_R_permuted.csv"), indices=181:360)
+gbc_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_GBC_L_permuted.csv"), indices=1:180)
+gbc_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/22q_TD_GBC_R_permuted.csv"), indices=181:360)
+
+# plot a few shuffled brains
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V1"), title="BrainSMASH, RSFA, L, 1", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V5"), title="BrainSMASH, RSFA, L, 5", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V100"), title="BrainSMASH, RSFA, L, 100", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V1000"), title="BrainSMASH, RSFA, R, 1000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V10000"), title="BrainSMASH, RSFA, R, 10000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+```
+
+compare RSFA and NetHo via permutation
+```{r}
+# function to compute correlation between two brain maps and compare to brainsmash null distribution
+# requires df for brain map1, and df and brainsmash output for map2
+# outputs list object with true correlation and vector for null distribution
+perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), val_col1="beta", val_col2="beta", method){
+  # get list of parcels in brainsmash data (e.g. left hemisphere only)
+  indices <- bsmash2[which(!is.na(bsmash2$V1)),"INDEX"]
+  # filter input for only those
+  fmap1 <- filter(map1, INDEX %in% indices) 
+  fmap2 <- filter(map2, INDEX %in% indices)
+  # merge data
+  m1 <- data.frame(INDEX=fmap1[,"INDEX"], col1=fmap1[,val_col1])
+  m2 <- data.frame(INDEX=fmap2[,"INDEX"], col2=fmap2[,val_col2])
+  m3 <- merge(x=m1, y=m2, by="INDEX")
+  df <- merge(x=bsmash2, y=m3, by="INDEX")
+  # true correlation
+  cor <- cor(x=as.numeric(m3$col1), y=as.numeric(m3$col2), use="complete.obs", method=method)
+  # correlate with shuffled brains
+  nulls <- lapply(cols, function(c) cor(x=as.numeric(df$col1), y=as.numeric(df[,c]), use="complete.obs", method=method)) %>% unlist %>% as.vector
+  out <- list(true_correlation=cor, nulls=nulls)
+}
+
+# function to get permuted two-tailed p-value
+perm_p <- function(test_stat, nulls, alternative="two.sided", verbose=FALSE){
+  if(alternative=="two.sided"){
+    sum <- sum(abs(nulls) > abs(test_stat))
+  }else if(alternative=="greater"){
+    sum <- sum(nulls > test_stat)
+  }else if(alternative=="less"){
+    sum <- sum(nulls < test_stat)
+  }
+  len <- length(nulls)
+  out <- sum/len
+  if(verbose==TRUE){
+    print(sum)
+    print(len)
+    print(out)
+  }
+  return(out)
+}
+
+# function to plot true correlation vs nulls
+plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided", title="", xlab="test statistic"){
+  p <- perm_p(test_stat=test_stat, nulls=nulls, alternative=alternative)
+  ggplot(data=data.frame(nulls=nulls), aes(x=nulls))+
+    geom_histogram(bins=40,fill="slategrey", alpha=0.7)+
+    geom_vline(xintercept=test_stat, color="red", linewidth=1, lty="solid")+
+    geom_label_repel(data=data.frame(xval=test_stat, text=paste("p =",round(p, digits=3))), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
+    xlab(xlab)+
+    ggtitle(title)+
+    theme_classic()
+}
+```
+
+```{r}
+netho_rsfa_22q_cor_L <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L, method="pearson")
+netho_rsfa_22q_cor_R <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_R, method="pearson")
+
+rsfa_netho_22q_cor_L <- perm_cor_brain_map(map1=rsfa_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_L, method="pearson")
+rsfa_netho_22q_cor_R <- perm_cor_brain_map(map1=rsfa_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_R, method="pearson")
+
+gbc_rsfa_22q_cor_L <- perm_cor_brain_map(map1=gbc_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L, method="pearson")
+gbc_rsfa_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_R, method="pearson")
+
+gbc_netho_22q_cor_L <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_L, method="pearson")
+gbc_netho_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_R, method="pearson")
+
+plot_cor_nulls(test_stat=netho_rsfa_22q_cor_L$true_correlation, nulls=netho_rsfa_22q_cor_L$nulls, xlab="Pearson r", title="NetHo vs RSFA, LH")
+plot_cor_nulls(test_stat=netho_rsfa_22q_cor_R$true_correlation, nulls=netho_rsfa_22q_cor_R$nulls, xlab="Pearson r", title="NetHo vs RSFA, RH")
+#plot_cor_nulls(rsfa_netho_22q_cor_L, title="RSFA vs NetHo, LH, n=10,000")
+#plot_cor_nulls(rsfa_netho_22q_cor_R, title="RSFA vs NetHo, RH, n=10,000")
+plot_cor_nulls(test_stat=gbc_rsfa_22q_cor_L$true_correlation, nulls=gbc_rsfa_22q_cor_L$nulls, xlab="Pearson r", title="GBC vs RSFA, LH")
+plot_cor_nulls(test_stat=gbc_rsfa_22q_cor_R$true_correlation, nulls=gbc_rsfa_22q_cor_R$nulls, xlab="Pearson r", title="GBC vs RSFA, RH")
+plot_cor_nulls(test_stat=gbc_netho_22q_cor_L$true_correlation, nulls=gbc_netho_22q_cor_L$nulls, xlab="Pearson r", title="GBC vs NetHo, LH")
+plot_cor_nulls(test_stat=gbc_netho_22q_cor_R$true_correlation, nulls=gbc_netho_22q_cor_R$nulls, xlab="Pearson r", title="GBC vs NetHo, RH")
+
+
+```
+
+read AHBA data
+```{r}
+# load parcellated AHBA data
+# this csv is the output of abagen.get_expression_data() python function to extract AHBA expression from CAB-NP surface atlas
+# https://abagen.readthedocs.io/en/stable/user_guide/expression.html
+ahbaSurfCABNP <- read.csv(file.path(project,"CAB-NP_surface_abagen_expression.csv"), header=T, sep=",") %>% rename("INDEX"="label")
+
+ahbaSurfCABNP_L <- filter(ahbaSurfCABNP, INDEX <= 180)
+ahbaSurfCABNP_R <- filter(ahbaSurfCABNP, INDEX > 180 & INDEX <= 360)
+```
+
+AHBA partial least squares
+```{r}
+# function to compare chosen brain map to AHBA with PLS
+ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col, verbose=FALSE){
+  if(verbose==TRUE){print(val_col)}
+  indices <- ahba$INDEX
+  # get list of genes
+  genes <- names(ahba)[which(names(ahba) != "INDEX")]
+  # filter for only rois in ahba data and merge
+  fmap <- filter(map, INDEX %in% indices)[,c("INDEX", val_col)]
+  df <- merge(x=ahba, y=fmap, by="INDEX") 
+  # make pls formula with val_col on left and all genes on right
+  xcols <- paste(genes, collapse=" + ")
+  plsformula <- as.formula(paste(val_col,"~", xcols))
+  # test model with k-fold cross validation using 6 segments
+  pls_test <- plsr(formula=plsformula, data=df, scale=TRUE, center=TRUE, validation="CV", na.action="na.omit", segments=6)
+}
+
+# function to return first component Y R2 from pls model
+# chose components with ncomp, default is just first component
+get_yr2 <- function(input, ncomp=1, estimate="CV"){
+  out <- R2(input, estimate = estimate, intercept = FALSE, ncomp=ncomp)$val %>% drop
+  return(out)
+}
+
+rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
+
+#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "R2")
+#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
+#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "MSEP")
+
+# x and y total variance explained
+# https://stackoverflow.com/questions/55380244/how-to-get-y-variance-explained-from-a-pls-model
+#y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
+rsfa_y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
+rsfa_x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
+
+gbc_ahba_pls <- ahba_pls(map=gbc_22q_lms, val_col="beta")
+gbc_y_r2 <- get_yr2(input=gbc_ahba_pls, ncomp=1:5)
+gbc_x_r2 <- cumsum(explvar(gbc_ahba_pls))[1:5]/100
+```
+
+takes too long to compute permutations locally
+on hoffman, clone this git repo and run submit_ahba_permute_hoffman.sh to submit as array
+```{r}
+# # function to compute PLS and brainSMASH permutation test with Y R2 as test statistic
+# # default n=10,000 permutations (expects brainsmash columns named V1:V10000)
+# # option for parallel computation, defaults to all cores
+# # TODO: parallel failing for mc.cores>1
+# # calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
+# ahba_permute_pls <- function(map, val_col, bsmash, cols=paste0("V",1:10000), verbose=FALSE, parallel=TRUE){
+#   # first test pls model with true brain map
+#   pls <- ahba_pls(map=map, val_col=val_col, verbose=verbose)
+#   # get test statistic for true model
+#   test_stat <- get_yr2(input=pls, ncomp=1, estimate="CV")
+#   # compute permuted test stats
+#   nulls <- NULL
+#   for(i in 1:length(cols)){
+#     col <- cols[i]
+#     # print message on the same line for each loop
+#     if(verbose==TRUE){
+#       cat(col,"...",(i/length(cols)*100),"%","\r")
+#       flush.console()
+#     }
+#     #print(paste(col,"...",(i/length(cols)*100),"%"))
+#     null_mod <- ahba_pls(map=bsmash, val_col=col,verbose=FALSE)
+#     null <- get_yr2(input=null_mod, ncomp=1, estimate="CV")
+#     nulls <- c(nulls, null)
+#   }
+#   # get 1-tailed p-value
+#   p <- sum(nulls > test_stat)/length(nulls)
+#   # return as list with original pls model, test statistic (first component Y R2), null test statistics, and 1-tailed p-value 
+#   out <- list(pls=pls, test_stat=test_stat, nulls=nulls, pval=p)
+#   return(out)
+# }
+# 
+# # test with only a couple permutations  
+# #rsfsa_ahba_perm_test <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:2), parallel=FALSE, verbose=TRUE)
+# 
+# # RSFA PLS for n=1,000 permutations
+# rsfsa_ahba_perm <- ahba_permute_pls(map=rsfa_22q_lms, val_col="beta", bsmash=rsfa_22q_bsmash_L, cols=paste0("V",1:1000), parallel=FALSE, verbose=TRUE)
+# 
+#  
+```
+
+get permuted PLS p-value
+```{r}
+# read nulls
+rsfa_nulls <- read.csv(file.path(project,"rsfa_ahba_pls_permuted_yr2.csv"))
+netho_nulls <- read.csv(file.path(project,"netho_ahba_pls_permuted_yr2.csv"))
+gbc_nulls <- read.csv(file.path(project,"gbc_ahba_pls_permuted_yr2.csv"))
+
+# plot distributions
+plot_cor_nulls(test_stat = rsfa_y_r2[1], nulls=as.numeric(rsfa_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="RSFA vs AHBA")
+plot_cor_nulls(test_stat = gbc_y_r2[1], nulls=as.numeric(gbc_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="GBC vs AHBA")
+
+
+```
+
+univariate AHBA correlations
+```{r}
+# function to correlate two brain maps
+# map1 and map2 should be same length vectors corresponding to the same parcels
+cor_brain_maps <- function(map1, map2, method="pearson", use="complete.obs"){
+  cor <- cor(x=as.numeric(map1), y=as.numeric(map2), use=use, method=method) %>% as.numeric
+  return(cor)
+}
+
+cor_brain_ahba <- function(ahba=ahbaSurfCABNP_L, map, gene, val_col, verbose=FALSE){
+  if(verbose==TRUE){print(gene)}
+  indices <- ahba$INDEX
+  # filter for only rois in ahba data and merge
+  fmap <- filter(map, INDEX %in% indices)[,c("INDEX", val_col)]
+  df <- merge(x=ahba, y=fmap, by="INDEX") 
+  out <- cor_brain_maps(map1=df[,val_col], map2=df[,gene]) %>% as.numeric
+  return(out)
+}
+
+cor_brain_ahba_all <- function(ahba=ahbaSurfCABNP_L, map, val_col="beta", verbose=FALSE){
+  # get list of genes
+  genes <- names(ahba)[which(names(ahba) != "INDEX")]
+  cors <- lapply(genes, function(g) cor_brain_ahba(gene=g, map=map, val_col=val_col, verbose=verbose)) %>% unlist
+  out <- data.frame(gene=genes, cor=cors)
+  return(out)
+}
+```
+
+```{r}
+# get AHBA correlations
+rsfa_ahba_cor <- cor_brain_ahba_all(map=rsfa_22q_lms, verbose=FALSE)
+#plot_cor_nulls(test_stat = 0.1, nulls=rsfa_ahba_cor$cor, alternative = "greater")
+netho_ahba_cor <- cor_brain_ahba_all(map=netho_22q_lms, verbose=FALSE)
+gbc_ahba_cor <- cor_brain_ahba_all(map=gbc_22q_lms, verbose=FALSE)
+
+# write.table(rsfa_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_RSFA_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
+# write.table(netho_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_NetHo_AHBA.csv"), quote=FALSE,  row.names = FALSE, sep=",")
+# write.table(gbc_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_GBC_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
+
+```
+
+```{r}
+# get top 10% absolute value of connections
+get_quantile <- function(data,probs=0.90,alternative="two.sided"){
+  if(alternative=="two.sided"){
+    data <- abs(data)
+  }
+  out <- as.numeric(quantile(data, probs=probs))
+}
+
+# to be run on the output of rsfa_ahba_cor
+get_quantile_genes <- function(df,probs=0.90,alternative="two.sided"){
+  # get correlation value for cutoff
+  threshold <- get_quantile(data=df$cor, probs=probs, alternative=alternative)
+  # get gene names past cutoff
+  if(alternative=="two.sided"){
+    genes <- df[which(abs(df$cor) > threshold),"gene"]
+  }else if(alternative=="greater"){
+    genes <- df[which(df$cor > threshold),"gene"]
+  }else if(alternative=="less"){
+    genes <- df[which(df$cor < threshold),"gene"]
+  }
+  return(genes)
+}
+
+# get top 90th percentile of absolute value correlations for RSFA
+rsfa_ahba_abs90 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.90, alternative="two.sided")
+rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative="two.sided")
+
+```
+
+brainsmash top quantile of univariate tested genes
+```{r}
+# calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
+map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
+  if(verbose==TRUE){print(variable)}
+  # error if bsmash and ahba have overlapping column names
+  #if(sum(names(bsmash) %in% names(map) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")} 
+  indices <- map$INDEX
+  df <- merge(x=map, y=bsmash, by="INDEX") %>% as.data.frame
+  # compute permuted test stats
+  nulls <- NULL
+  for(i in 1:length(bsmash_cols)){
+    col <- bsmash_cols[i]
+    # print message on the same line for each loop
+    if(verbose==TRUE){
+      cat("\r",col,"...",(i/length(bsmash_cols)*100),"%","\r")
+      flush.console()
+    }
+    null <- cor(x=as.numeric(df[,variable]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
+    nulls <- c(nulls, null)
+  }
+  return(nulls)
+}
+
+# test with only a few permutations
+#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95[1:10], function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE, bsmash_cols=paste0("V",1:10)))
+
+#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(variable=g,map=ahbaSurfCABNP_L, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
+```
+
+correlate with neuromaps output
+```{r}
+# read data fromm Kuldeep
+neuromaps <- read.csv(file.path(project,"df_neuromaps_Glasser180.csv"), header=TRUE) %>% rename("GlasserRegion"="X")
+nmap_cols <- names(neuromaps)[which(names(neuromaps) !="GlasserRegion")]
+
+# function to merge CAB-NP results with HCP parcel names
+cabnp_hcp_lh <- function(hcp_df, colname="GlasserRegion", cabnp_df){
+  lh <- filter(cabnp_df, INDEX %in% 1:180)
+  lh$GLASSERLABELNAME
+  lh[,colname] <- lh$GLASSERLABELNAME %>% gsub("^L_","",.) %>% gsub("_ROI","",.)
+  out <- merge(x=lh, y=hcp_df, by=colname)
+  return(out)
+}
+
+# merge with neuromap
+rsfa_22q_nmap <- cabnp_hcp_lh(cabnp_df=rsfa_22q_lms, hcp_df=neuromaps)
+netho_22q_nmap <- cabnp_hcp_lh(cabnp_df=netho_22q_lms, hcp_df=neuromaps)
+gbc_22q_nmap <- cabnp_hcp_lh(cabnp_df=gbc_22q_lms, hcp_df=neuromaps)
+
+# get neuromap df without fMRI result
+neuromaps_ordered <- subset(data.table(rsfa_22q_nmap), select=-c(beta, FDR_q, FDR_sig, beta_FDR, se, t, p))
+
+# correlate with nmap columns
+nmap_cor <- function(map1, map_all, method="pearson", use="complete.obs", cols=nmap_cols){
+  cor <- lapply(cols, function(c) cor_brain_maps(map1=map1, map2=map_all[,c], method=method, use=use)) %>% as.numeric
+  out <- data.frame(map=cols, cor=cor)
+  out$cor %<>% as.numeric
+  out <- out[order(out$cor),]
+  return(out)
+}
+
+rsfa_22q_nmap_cor <- nmap_cor(map1=rsfa_22q_nmap$beta, map_all=rsfa_22q_nmap, method="pearson", use="complete.obs")
+netho_22q_nmap_cor <- nmap_cor(map1=netho_22q_nmap$beta, map_all=netho_22q_nmap, method="pearson", use="complete.obs")
+gbc_22q_nmap_cor <- nmap_cor(map1=gbc_22q_nmap$beta, map_all=gbc_22q_nmap, method="pearson", use="complete.obs")
+
+# plot
+# pl_cmruglu <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_nmap, roi_col="INDEX", val_col="cmruglu")
+# view_xifti_surface(pl_cmruglu, title="Glucose Metabolism", cex.title=1.3, colors="magma",hemisphere="left")
+# pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
+# view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue(),hemisphere="left")
+
+# bsmash permutations for neuromaps
+#rsfa_22q_nmap_nulls <- map_permute_cor(map=neuromaps_ordered, variable="cmruglu", bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000))
+
+# test perm p for one measure
+#perm_p(test_stat=rsfa_22q_nmap_cor[1,2], nulls=rsfa_22q_nmap_nulls, alternative="two.sided")
+
+# function to compute nulls and perm-p for each neuromaps measure
+# outputs list object containing neuromaps outputs with p-vals added, and a data frame with a column for each null and row for each measure
+perm_p_neuromaps <- function(neuromap_outputs, order=nmap_match$variable, neuromap_df=neuromaps_ordered, bsmash, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE){
+  maps <- neuromap_outputs$map
+  nmap_out <- neuromap_outputs
+  nmap_out$p <- NA
+  null_df <- NULL
+  for(m in maps){
+    # get true correlation
+    cor <- filter(neuromap_outputs, map==m)$cor
+    # get nulls
+    nulls <- map_permute_cor(map=neuromap_df, variable=m, bsmash=bsmash, bsmash_cols=bsmash_cols)
+    # get p-val
+    p <- perm_p(test_stat=cor, nulls=nulls, alternative=alternative)
+    # record outputs
+    nmap_out[which(nmap_out$map==m),"p"] <- p
+    null_df <- cbind(null_df,nulls)
+  }
+  null_df %<>% as.data.frame
+  colnames(null_df) <- maps
+  null_df$perm <- 1:nrow(null_df)
+  nmap_out %<>% as.data.frame
+  nmap_out[match(order, nmap_out$map),]
+  out <- list(pvals=as.data.frame(nmap_out), nulls=null_df)
+  return(out)
+}
+
+# neuromaps permuted p-vals
+nmap_match <- data.frame(variable=c("cmruglu","cmr02","CBF","cbv","PC1.AHBA","G1.fMRI","intersubjvar","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2"),name=c("Glucose metabolism","Oxygen metabolism", "Cerebral blood flow", "Cerebral blood volume", "PC1 gene expression", "fMRI gradient", "Intersubject variability", "PC1 neurosynth", "Allometric scaling (PNC)", "Allometric scaling (NIH)", "Developmental expansion", "Evolutionary expansion", "Cortical thickness", "T1w/T2w ratio", "MEG delta", "MEG theta", "MEG alpha", "MEG beta", "MEG gamma1", "MEG gamma2"))
+#nmap_order <- c("cmruglu","cmr02","CBF","cbv","G1.fMRI","intersubjvar","PC1.AHBA","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2")
+
+rsfa_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+netho_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=netho_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=netho_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+gbc_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=gbc_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+```
+
+plot neuromaps results
+```{r}
+# create long dataframes to plot nulls
+rsfa_22q_nuls_long <- melt.data.table(as.data.table(rsfa_22q_nmap_p$nulls), id.vars="perm")
+rsfa_22q_nuls_long$variable <- factor(rsfa_22q_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+netho_22q_nuls_long <- melt.data.table(as.data.table(netho_22q_nmap_p$nulls), id.vars="perm")
+netho_22q_nuls_long$variable <- factor(netho_22q_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+gbc_22q_nuls_long <- melt.data.table(as.data.table(gbc_22q_nmap_p$nulls), id.vars="perm")
+gbc_22q_nuls_long$variable <- factor(gbc_22q_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+  
+gbc_box <- ggplot(data=gbc_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50")+
+  geom_point(data=gbc_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #ylab("")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Global Connectivity")+
+  theme(legend.position="none")
+
+netho_box <- ggplot(data=netho_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50")+
+  geom_point(data=netho_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Local Connectivity")
+  
+
+rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50")+
+  #geom_half_violin(fill="grey50", side="r", ="lightgrey", side="r", lty="blank")+
+  geom_point(data=rsfa_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(va  geom_hal  geom_hal))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  #theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #ylab("")+
+  xlab("Brain Map Comparison")+
+  #xlab("")+
+  ggtitle("Brain Signal Variability")+
+  theme(plot.margin = unit(c(0,0,0,0.7),"in"))+
+  scale_x_discrete(labels=nmap_match$name)
+
+neuromaps_22q_bplots <- gbc_box/netho_box/rsfa_box+plot_layout(guides = "collect")
+neuromaps_22q_bplots
+
+ggsave(neuromaps_22q_bplots, file=file.path(project,"figures/neuromaps/neuromaps_22q_correlations.pdf"), device = "pdf", height = 8, width = 9)
+```
+
+
+
+demo table
+```{r}
+demo_table <- CreateTableOne(data=demo_22q_napls, strata="Group", vars=c("AGE","SEX"))
+demo_table
+```
+
+
+
+
+
+
+
+
+
+load data (instead of loading individual files from hoffman)
+```{r message=TRUE, warning=FALSE}
+# load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
+# load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
+```
+
+
+
+
