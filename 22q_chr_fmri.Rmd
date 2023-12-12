@@ -53,9 +53,6 @@ print(paste("Project directory:", project))
 wbpath <- "/Applications/workbench/bin_macosx64/"
 ciftiTools.setOption("wb_path", wbpath)
 
-# set local path to SSHFS mount point for hoffman:/u/project/cbearden/data
-# TODO: edit if necessary
-hoffman <- "~/Desktop/hoffman_mount/"
 
 # load rgl for ciftiTools visualization
 # may require XQartz v2.8.1 to be installed locally
@@ -91,7 +88,19 @@ trio_sessions <- c("Q_0001_09242012", "Q_0001_10152010", "Q_0005_04182011", "Q_0
 #prisma_sessions <- list.files(prisma_dir,pattern="Q_[0-9]")
 prisma_sessions <- c("Q_0005_11072017", "Q_0017_10022017", "Q_0019_03022020", "Q_0036_08082017", "Q_0036_08312018", "Q_0036_09302019", "Q_0037_08152017", "Q_0041_10092017", "Q_0051_02032017", "Q_0105_03112020", "Q_0105_12032018", "Q_0114_12052017", "Q_0141_06122018", "Q_0141_08052019", "Q_0147_12112017", "Q_0147_12112018", "Q_0196_01082020", "Q_0213_05012017", "Q_0217_01242017", "Q_0217_02192020", "Q_0235_05252017", "Q_0238_02202018", "Q_0240_09192017", "Q_0240_11162018", "Q_0246_10092018", "Q_0246_10102017", "Q_0246_10142016", "Q_0260_06192017", "Q_0260_06242019", "Q_0260_06252018", "Q_0263_02252019", "Q_0263_02262018", "Q_0263_11072016", "Q_0271_10182016", "Q_0277_12132016", "Q_0278_11292017", "Q_0279_11302017", "Q_0279_12052019", "Q_0279_12132016", "Q_0285_03212017", "Q_0285_06062018", "Q_0286_03212017", "Q_0287_06062018", "Q_0289_03212017", "Q_0289_06062018", "Q_0291_11042016", "Q_0291_11302018", "Q_0304_12202016", "Q_0310_01252018", "Q_0310_02132017", "Q_0310_04292019", "Q_0319_03192018", "Q_0319_03282017", "Q_0321_03192018", "Q_0321_03272017", "Q_0324_04182018", "Q_0326_10202017", "Q_0326_12062018", "Q_0327_10192017", "Q_0327_12072018", "Q_0331_06102019", "Q_0331_06212018", "Q_0331_06272017", "Q_0333_04142017", "Q_0334_12012016", "Q_0336_01102017", "Q_0345_04122017", "Q_0345_08152018", "Q_0345_09112019", "Q_0346_04102017", "Q_0346_04102018", "Q_0348_04212017", "Q_0348_08152018", "Q_0350_04192017", "Q_0350_09142018", "Q_0353_04182018", "Q_0353_05022017", "Q_0355_05312018", "Q_0356_05312018", "Q_0361_10212019", "Q_0361_11202018", "Q_0369_04182018", "Q_0369_06182019", "Q_0371_08042020", "Q_0374_05252018", "Q_0381_08072018", "Q_0381_09102019", "Q_0382_08282018", "Q_0383_08282018", "Q_0387_08242018", "Q_0387_12032019", "Q_0390_09042018", "Q_0390_09302019", "Q_0391_09252018", "Q_0395_11062018", "Q_0397_10172019", "Q_0402_01112019", "Q_0404_03112019", "Q_0407_06122019", "Q_0408_05172019", "Q_0414_07172019", "Q_0415_07292019", "Q_0416_07292019", "Q_0425_11052019", "Q_0429_01092020", "Q_0432_02142020", "Q_0433_02262020", "Q_0443_06282021", "Q_0446_06152021", "Q_0459_08192021", "Q_0461_09112021", "Q_0484_01042022", "Q_0519_05312022", "Q_0520_06012022", "Q_0521_05202022", "Q_0525_06072022", "Q_0526_06242022", "Q_0527_07112022", "Q_0528_07202022", "Q_0529_07202022", "Q_0561_11032022", "Q_0568_10252022")
 # exclude Q_0390_09302019 for now due to no AP BOLD, and exclude two NAPLS subjects with no demographic info and 02_S0013_00 with some NAs in NetHo data (need to investigate further)
-exclude_sessions <- c("Q_0390_09302019","01_S0083_00","01_S0128_00","02_S0013_00")
+# exclude the following NAPLS sessions after T1w QC (12/11/23)
+# 04_S0115_00
+# 06_S0068_00
+# 01_S0040_00
+# 01_S0045_03
+# 08_S0052_00
+# 01_S0064_00
+# 01_S0072_00
+# 04_S0115_00
+# 08_S0052_00
+# 01_S0064_00
+exclude_sessions <- c("Q_0390_09302019","01_S0083_00","01_S0128_00","02_S0013_00","04_S0115_00","06_S0068_00","01_S0040_00","01_S0045_03","08_S0052_00","01_S0064_00","01_S0072_00","04_S0115_00","08_S0052_00","01_S0064_00")
+
 # for now also exclude several new sessions without rsfa calculated
 #exclude_sessions <- c("Q_0214_05012017","Q_0390_09302019","Q_0477_01052022","Q_0484_01042022","Q_0508_06232022","Q_0519_05312022","Q_0520_06012022","Q_0521_05202022","Q_0525_06072022","Q_0526_06242022","Q_0527_07112022","Q_0528_07202022","Q_0529_07202022","Q_0541_07182022","Q_0549_10182022","Q_0561_11032022","Q_0568_10252022")
 prisma_sessions <- prisma_sessions[! prisma_sessions %in% exclude_sessions]
@@ -270,17 +279,19 @@ netho_all$INDEX %<>% as.numeric
 netho_all$NetHo %<>% as.numeric
 
 # function to convert parcellated fc matrix to global fc by getting the average connectivity for each ROI
-gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r_Fz", key=ji_key){
-  # get unique rois
-  rois <- unique(c(mat[,col1],mat[,col2]))
+gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r_Fz", rois=1:360, key=ji_key){
+  # deprecated line below getting unique rois in favor of choosing rois in function input for more flexibility, with default rois 1:360 (e.g. cortex)
+  #rois <- unique(c(mat[,col1],mat[,col2]))
   # make df to filter (rename chosen columns to "col1" and "col2" to easily reference in filter command)
   dat <- mat
   dat$col1 <- dat[,col1]
   dat$col2 <- dat[,col2]
   dat[,variable] %<>% as.numeric
+  # filter for only specified rois (default only cortex)
+  dat_use <- filter(dat, col1 %in% rois & col2 %in% rois)[,c("col1","col2",variable)]
   # get subject ID and site
-  id <- unique(dat$MRI_S_ID)
-  site <- unique(dat$site)
+  id <- unique(dat_use$MRI_S_ID)
+  site <- unique(dat_use$site)
   if(length(id)>1){
     stop("Error: more than one MRI ID in input data")
   }
@@ -288,7 +299,7 @@ gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r
   out <- data.frame(INDEX=rois)
   # get mean fc for each roi
   for(r in rois){
-    rows <- filter(dat, col1==r | col2==r)
+    rows <- filter(dat_use, col1==r | col2==r)
     gbc <- mean(rows[,variable]) 
     out[which(out$INDEX==r),"GBC"] <- gbc
   }
@@ -298,7 +309,7 @@ gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r
   return(out)
 }
 
-# read between parcel fc
+# read between parcel fc CORTEX
 trio_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=bparc_name))) %>% do.call(rbind,.)
 prisma_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=bparc_name_prisma))) %>% do.call(rbind,.)
 suny_gbc <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=bparc_name))) %>% do.call(rbind,.)
@@ -461,17 +472,22 @@ run_neurocombat <- function(input,
 
 # TODO: address outliers before comBat?
 
+# use only cortical regions
+rsfa_ctx <- filter(rsfa_all, INDEX %in% 1:360)
+netho_ctx <- filter(netho_no_na, INDEX %in% 1:360)
+gbc_ctx <- filter(gbc_all, INDEX %in% 1:360)
+
 # run combat
-rsfa_combat_22q <- run_neurocombat(input=filter(rsfa_all, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="t_sd")
-rsfa_combat_napls <- run_neurocombat(input=filter(rsfa_all, site=="NAPLS2"), var_column="t_sd")
+rsfa_combat_22q <- run_neurocombat(input=filter(rsfa_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="t_sd")
+rsfa_combat_napls <- run_neurocombat(input=filter(rsfa_ctx, site=="NAPLS2"), var_column="t_sd")
 #rsfa_combat <- rbind(rsfa_combat_22q,rsfa_combat_napls)
 
-netho_combat_22q <- run_neurocombat(input=filter(netho_no_na, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="NetHo")
-netho_combat_napls <- run_neurocombat(input=filter(netho_no_na, site=="NAPLS2"), var_column="NetHo")
+netho_combat_22q <- run_neurocombat(input=filter(netho_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="NetHo")
+netho_combat_napls <- run_neurocombat(input=filter(netho_ctx, site=="NAPLS2"), var_column="NetHo")
 #netho_combat <- rbind(netho_combat_22q,netho_combat_napls)
 
-gbc_combat_22q <- run_neurocombat(input=filter(gbc_all, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="GBC")
-gbc_combat_napls <- run_neurocombat(input=filter(gbc_all, site=="NAPLS2"), var_column="GBC")
+gbc_combat_22q <- run_neurocombat(input=filter(gbc_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="GBC")
+gbc_combat_napls <- run_neurocombat(input=filter(gbc_ctx, site=="NAPLS2"), var_column="GBC")
 #gbc_combat <- rbind(gbc_combat_22q,gbc_combat_napls)
 
 #netho_combat <- run_neurocombat(input=netho_no_na, var_column="NetHo")
@@ -683,34 +699,34 @@ get_parcel_group_lm <- function(list,
 }
 
 # get main effects of group for each measure
-rsfa_22q_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL")
+rsfa_22q_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("RSFA 22q significant regions:",sum(rsfa_22q_lms$FDR_sig)))
 
-rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N")
+rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("RSFA CHR significant regions:",sum(rsfa_chr_lms$FDR_sig)))
 
-netho_22q_lms <- get_parcel_group_lm(list=netho_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL")
+netho_22q_lms <- get_parcel_group_lm(list=netho_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("NetHo 22q significant regions:",sum(netho_22q_lms$FDR_sig, na.rm=TRUE)))
 
-netho_chr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N")
+netho_chr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("NetHo CHR significant regions:",sum(netho_chr_lms$FDR_sig, na.rm=TRUE)))
 
-gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL")
+gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("GBC 22q significant regions:",sum(gbc_22q_lms$FDR_sig)))
 
-gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N")
+gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL-N"),refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$FDR_sig)))
 
 ```
 test CHRc vs TD
 ```{r}
-rsfa_chrc_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N")
+rsfa_chrc_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("RSFA CHRc significant regions:",sum(rsfa_chrc_lms$FDR_sig)))
 
-netho_chrc_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N")
+netho_chrc_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("NetHo CHRc significant regions:",sum(netho_chrc_lms$FDR_sig)))
 
-gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N")
+gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("GBC CHRc significant regions:",sum(gbc_chrc_lms$FDR_sig)))
 
 ```
@@ -797,48 +813,65 @@ pal_yellow_orange_red <- function(){
 # 22q RSFA
 pl_rsfa_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta_FDR")
 view_xifti_surface(pl_rsfa_22q_b_fdr, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# save
+view_xifti_surface(pl_rsfa_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q NetHo
 pl_netho_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="beta_FDR")
 view_xifti_surface(pl_netho_22q_b_fdr, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# save
+view_xifti_surface(pl_netho_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q GBC
 pl_gbc_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta_FDR")
 view_xifti_surface(pl_gbc_22q_b_fdr, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# save
+view_xifti_surface(pl_gbc_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # plot group difference beta 
 # 22q RSFA
 pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
 view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# save
+view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q NetHo
 pl_netho_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="beta")
 view_xifti_surface(pl_netho_22q_b, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# save
+view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q GBC
 pl_gbc_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta")
 view_xifti_surface(pl_gbc_22q_b, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
-
+# save
+view_xifti_surface(pl_gbc_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # plot CHR netho FDR beta
 # chr NetHo
 pl_netho_chr_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="beta_FDR")
 view_xifti_surface(pl_netho_chr_b_fdr, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
-
+# save
+view_xifti_surface(pl_netho_chr_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # plot CHR threshold free beta
 # chr RSFA
 pl_rsfa_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_chr_lms, roi_col="INDEX", val_col="beta")
 view_xifti_surface(pl_rsfa_chr_b, title="Signal Variablity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# save
+view_xifti_surface(pl_rsfa_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # chr NetHo
 pl_netho_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="beta")
 view_xifti_surface(pl_netho_chr_b, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+# save
+view_xifti_surface(pl_netho_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # chr GBC
 pl_gbc_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_chr_lms, roi_col="INDEX", val_col="beta")
 view_xifti_surface(pl_gbc_chr_b, title="Global Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
-
+# save
+view_xifti_surface(pl_gbc_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 ```
 
@@ -1346,9 +1379,9 @@ netho_box <- ggplot(data=netho_22q_nuls_long, aes(y=value, x=variable))+
 
 rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50")+
-  #geom_half_violin(fill="grey50", side="r", lty="blank", alpha=0.5)+
+  #geom_half_violin(fill="grey50", side="r", ="lightgrey", side="r", lty="blank")+
   geom_point(data=rsfa_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
-  scale_color_manual(values = c("tan","red"))+
+  scale_color_manual(va  geom_hal  geom_hal))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
   theme(axis.text.x = element_text(angle = 45, hjust=1))+

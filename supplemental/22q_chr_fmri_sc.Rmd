@@ -461,22 +461,17 @@ run_neurocombat <- function(input,
 
 # TODO: address outliers before comBat?
 
-# use only cortical regions
-rsfa_ctx <- filter(rsfa_all, INDEX %in% 1:360)
-netho_ctx <- filter(netho_no_na, INDEX %in% 1:360)
-gbc_ctx <- filter(gbc_all, INDEX %in% 1:360)
-
 # run combat
-rsfa_combat_22q <- run_neurocombat(input=filter(rsfa_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="t_sd")
-rsfa_combat_napls <- run_neurocombat(input=filter(rsfa_ctx, site=="NAPLS2"), var_column="t_sd")
+rsfa_combat_22q <- run_neurocombat(input=filter(rsfa_all, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="t_sd")
+rsfa_combat_napls <- run_neurocombat(input=filter(rsfa_all, site=="NAPLS2"), var_column="t_sd")
 #rsfa_combat <- rbind(rsfa_combat_22q,rsfa_combat_napls)
 
-netho_combat_22q <- run_neurocombat(input=filter(netho_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="NetHo")
-netho_combat_napls <- run_neurocombat(input=filter(netho_ctx, site=="NAPLS2"), var_column="NetHo")
+netho_combat_22q <- run_neurocombat(input=filter(netho_no_na, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="NetHo")
+netho_combat_napls <- run_neurocombat(input=filter(netho_no_na, site=="NAPLS2"), var_column="NetHo")
 #netho_combat <- rbind(netho_combat_22q,netho_combat_napls)
 
-gbc_combat_22q <- run_neurocombat(input=filter(gbc_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="GBC")
-gbc_combat_napls <- run_neurocombat(input=filter(gbc_ctx, site=="NAPLS2"), var_column="GBC")
+gbc_combat_22q <- run_neurocombat(input=filter(gbc_all, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="GBC")
+gbc_combat_napls <- run_neurocombat(input=filter(gbc_all, site=="NAPLS2"), var_column="GBC")
 #gbc_combat <- rbind(gbc_combat_22q,gbc_combat_napls)
 
 #netho_combat <- run_neurocombat(input=netho_no_na, var_column="NetHo")
@@ -1351,9 +1346,9 @@ netho_box <- ggplot(data=netho_22q_nuls_long, aes(y=value, x=variable))+
 
 rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50")+
-  #geom_half_violin(fill="grey50", side="r", ="lightgrey", side="r", lty="blank")+
+  #geom_half_violin(fill="grey50", side="r", lty="blank", alpha=0.5)+
   geom_point(data=rsfa_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
-  scale_color_manual(va  geom_hal  geom_hal))+
+  scale_color_manual(values = c("tan","red"))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
   theme(axis.text.x = element_text(angle = 45, hjust=1))+
