@@ -916,12 +916,12 @@ netho_22q_lms_R_b <- netho_22q_lms_R[order(netho_22q_lms_R$INDEX),"beta"]
 # gbc Left cortex
 gbc_22q_lms_L <- filter(gbc_22q_lms, INDEX <= 180)
 gbc_22q_lms_L_b <- gbc_22q_lms_L[order(gbc_22q_lms_L$INDEX),"beta"]
-write.table(gbc_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(gbc_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # gbc Right cortex
 gbc_22q_lms_R <- filter(gbc_22q_lms, INDEX > 180 & INDEX <= 360)
 gbc_22q_lms_R_b <- gbc_22q_lms_R[order(gbc_22q_lms_R$INDEX),"beta"]
-write.table(gbc_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(gbc_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # gbc subcortex
 #gbc_22q_lms_SC <- filter(gbc_22q_lms, INDEX > 360)
@@ -933,32 +933,32 @@ write.table(gbc_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_GBC_R.txt"), 
 # RSFA Left cortex CHR
 rsfa_chr_lms_L <- filter(rsfa_chr_lms, INDEX <= 180)
 rsfa_chr_lms_L_b <- rsfa_chr_lms_L[order(rsfa_chr_lms_L$INDEX),"beta"]
-write.table(rsfa_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(rsfa_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # RSFA Right cortex CHR
 rsfa_chr_lms_R <- filter(rsfa_chr_lms, INDEX > 180 & INDEX <= 360)
 rsfa_chr_lms_R_b <- rsfa_chr_lms_R[order(rsfa_chr_lms_R$INDEX),"beta"]
-write.table(rsfa_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(rsfa_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # NetHo Left cortex CHR
 netho_chr_lms_L <- filter(netho_chr_lms, INDEX <= 180)
 netho_chr_lms_L_b <- netho_chr_lms_L[order(netho_chr_lms_L$INDEX),"beta"]
-write.table(netho_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(netho_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # NetHo Right cortex CHR
 netho_chr_lms_R <- filter(netho_chr_lms, INDEX > 180 & INDEX <= 360)
 netho_chr_lms_R_b <- netho_chr_lms_R[order(netho_chr_lms_R$INDEX),"beta"]
-write.table(netho_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(netho_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # gbc Left cortex CHR
 gbc_chr_lms_L <- filter(gbc_chr_lms, INDEX <= 180)
 gbc_chr_lms_L_b <- gbc_chr_lms_L[order(gbc_chr_lms_L$INDEX),"beta"]
-write.table(gbc_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(gbc_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 # gbc Right cortex CHR
 gbc_chr_lms_R <- filter(gbc_chr_lms, INDEX > 180 & INDEX <= 360)
 gbc_chr_lms_R_b <- gbc_chr_lms_R[order(gbc_chr_lms_R$INDEX),"beta"]
-write.table(gbc_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+#write.table(gbc_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 
 
 ```
@@ -1230,20 +1230,22 @@ maps_lower_df$value <- NA
 maps_replace <- rbind(maps_upper_df,maps_lower_df, filter(maps_all_df, tri=="diag")) 
 
 hmap_cor <- ggplot(maps_replace, aes(x=Var1,y=Var2))+
-  theme_classic(base_size = 13)+
+  theme_void(base_size = 13)+
   geom_tile(aes(fill=value), color="black")+
   geom_point(aes(color=value_p05, shape=!is.na(value_p05)),size=17)+
   scale_shape_manual(values=c(NA,19))+
   scale_fill_scico(palette="vik",limits=c(-0.6,0.6),na.value="white")+
   scale_color_scico(palette="vik",limits=c(-0.6,0.6),na.value="white")+
   scale_size(range = c(2,12))+
-  theme(axis.text.x = element_text(angle = 45, hjust=1, size=18),
+  theme(axis.text.x = element_text(angle = 20, hjust=0.5, size=18),
         axis.text.y = element_text(size=18),
         legend.position="right",
-        legend.title = element_text(size=14),
+        legend.title = element_text(size=16),
+        legend.text = element_text(size=14),
         title = element_text(size=16),
-        axis.title.x= element_text(size=18),
-        axis.title.y = element_text(angle = 0, vjust = 0.5, size=18))+
+        axis.title.x= element_text(size=19, vjust=-1),
+        axis.title.y = element_text(angle = 0, vjust = 0.5, size=19),
+        plot.margin = margin(0.5,0.1,0.1,0.1, "in"))+
   ylab("map 2")+
   xlab("map 1")+
   #scale_y_discrete(position = "right")+
@@ -1256,12 +1258,12 @@ plot(hmap_cor)
 #ggsave(plot=hmap_cor, filename = file.path(project,"figures/fmri_maps/correlation_heatmap.pdf"), device="pdf", width=7.5, height=5.5)
 
 # plot distributions for two significant pairs
-cor_nulls1 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$nulls, xlab="Pearson r", title="22qDel LC vs. 22qDel BSV")
+cor_nulls1 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$nulls, xlab="Pearson's r", title="22qDel LC vs. 22qDel BSV")
 
-cor_nulls2 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q GBC" & maps_all_df$Var2 == "CHR LC")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q GBC" & maps_all_df$Var2 == "CHR LC")]]$nulls, xlab="Pearson r", title="22qDel GBC vs. CHR LC")
+cor_nulls2 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q GBC" & maps_all_df$Var2 == "CHR LC")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q GBC" & maps_all_df$Var2 == "CHR LC")]]$nulls, xlab="Pearson's r", title="22qDel GBC vs. CHR LC")
 
 cor_nulls_all <- cor_nulls1+cor_nulls2+ 
-  plot_annotation(title = 'Null distributions for significant comparisons',theme=theme(plot.title=element_text(size=15,hjust=0.5)))
+  plot_annotation(title = 'Null distributions for significant comparisons',theme=theme(plot.title=element_text(size=16,hjust=0.5)))
 cor_nulls_all
 #ggsave(plot=cor_nulls_all, filename = file.path(project,"figures/fmri_maps/correlations_null_dist.pdf"), device="pdf", width=7, height=4)
 
@@ -1498,12 +1500,20 @@ nmap_cols <- names(neuromaps)[which(names(neuromaps) !="GlasserRegion")]
 ahbaSurfPVSST_L <- ahbaSurfCABNP_L
 ahbaSurfPVSST_L$PVALB_SST <- ahbaSurfPVSST_L$PVALB - ahbaSurfPVSST_L$SST
 
+# add size of ROIs
+roi_sizes_L <- xii_Ji_parcel$data$cortex_left %>% table %>% as.data.frame
+colnames(roi_sizes_L) <- c("INDEX","ROI_size")
+
+# update nmap_cols
+nmap_cols <- c(nmap_cols,"PVALB_SST","ROI_size")
+
 # function to merge CAB-NP results with HCP parcel names
-cabnp_hcp_lh <- function(hcp_df, colname="GlasserRegion", cabnp_df, ahba_df=ahbaSurfPVSST_L, ahba_cols="PVALB_SST"){
+cabnp_hcp_lh <- function(hcp_df, colname="GlasserRegion", cabnp_df, ahba_df=ahbaSurfPVSST_L, ahba_cols="PVALB_SST", sizes=roi_sizes_L){
   lh <- filter(cabnp_df, INDEX %in% 1:180)
   lh$GLASSERLABELNAME
   lh[,colname] <- lh$GLASSERLABELNAME %>% gsub("^L_","",.) %>% gsub("_ROI","",.)
   out <- merge(x=lh, y=hcp_df, by=colname)
+  out <- merge(x=out, y=sizes, by="INDEX")
   if(!is.null(ahba_df)){
     ahba_merge <- ahba_df[,c("INDEX",ahba_cols)]
     out <- merge(x=out, y=ahba_merge, by="INDEX")
@@ -1581,7 +1591,7 @@ perm_p_neuromaps <- function(neuromap_outputs, order=nmap_match$variable, neurom
 }
 
 # neuromaps permuted p-vals
-nmap_match <- data.frame(variable=c("cmruglu", "cmr02", "CBF", "cbv", "PC1.AHBA", "PVALB_SST", "G1.fMRI", "intersubjvar", "PC1.Neurosynth", "scalingpnc", "scalingnih", "devexp", "Evolution.Expansion", "Cortical.Thickness", "T1T2ratio", "meg_delta", "meg_theta", "meg_alpha", "meg_beta", "meg_gamma1", "meg_gamma2"), name=c("Glucose metabolism", "Oxygen metabolism", "Cerebral blood flow", "Cerebral blood volume", "PC1 gene expression", "PVALB-SST gradient","fMRI gradient", "Intersubject variability", "PC1 neurosynth", "Allometric scaling (PNC)", "Allometric scaling (NIH)", "Developmental expansion", "Evolutionary expansion", "Cortical thickness", "T1w/T2w ratio", "MEG delta", "MEG theta", "MEG alpha", "MEG beta", "MEG gamma1", "MEG gamma2"))
+nmap_match <- data.frame(variable=c("cmruglu", "cmr02", "CBF", "cbv", "PC1.AHBA", "PVALB_SST", "G1.fMRI", "intersubjvar", "PC1.Neurosynth", "scalingpnc", "scalingnih", "devexp", "Evolution.Expansion", "Cortical.Thickness", "T1T2ratio", "meg_delta", "meg_theta", "meg_alpha", "meg_beta", "meg_gamma1", "meg_gamma2","ROI_size"), name=c("Glucose metabolism", "Oxygen metabolism", "Cerebral blood flow", "Cerebral blood volume", "PC1 gene expression", "PVALB-SST gradient","fMRI gradient", "Intersubject variability", "PC1 neurosynth", "Allometric scaling (PNC)", "Allometric scaling (NIH)", "Developmental expansion", "Evolutionary expansion", "Cortical thickness", "T1w/T2w ratio", "MEG delta", "MEG theta", "MEG alpha", "MEG beta", "MEG gamma1", "MEG gamma2","ROI size"))
 #nmap_order <- c("cmruglu","cmr02","CBF","cbv","G1.fMRI","intersubjvar","PC1.AHBA","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2")
 # 22q
 rsfa_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
@@ -1773,6 +1783,11 @@ view_xifti_surface(pl_pv, title="PVALB-SST gradient",hemisphere = "left", cex.ti
 #save
 view_xifti_surface(pl_pv, title="PVALB-SST gradient",hemisphere = "left", cex.title=3,zlim=c(-0.6,0.6), colors="viridis", fname=file.path(project,"figures/neuromaps/pvalb_sst.png"),legend_embed=TRUE)
 
+# Size
+pl_size <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="ROI_size")
+view_xifti_surface(pl_size, title="ROI size",hemisphere = "left", cex.title=3,zlim=c(35,840), colors="mako")
+#save
+view_xifti_surface(pl_size, title="ROI size",hemisphere = "left", cex.title=3,zlim=c(-0.6,0.6), colors="mako", fname=file.path(project,"figures/neuromaps/pvalb_size.png"),legend_embed=TRUE)
 
 # plot group difference beta 
 # 22q RSFA
@@ -1782,14 +1797,26 @@ view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.tit
 view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.title=3, hemisphere="left", fname=file.path(project,"figures/neuromaps//netho_22q_b_l.png"),legend_embed=TRUE, title="22qDel LC")
 ```
 
+prepare data for demo table
+```{r}
+demo_22q_napls_all <- demo_22q_napls
+
+```
+
 
 demo table
 ```{r}
-demo_table <- CreateTableOne(data=demo_22q_napls, strata="Group", vars=c("AGE","SEX"))
-demo_table
+demo_22q_all <- filter(demo_22q_napls_all, Group %in% c("22qDel", "CONTROL")) %>% droplevels
+demo_napls_all <- filter(demo_22q_napls_all, Group %in% c("CHR", "CONTROL-N")) %>% droplevels
 
-demo_table_c <- CreateTableOne(data=demo_22q_napls, strata="GroupConvert", vars=c("AGE","SEX"))
-demo_table_c
+demo_table_22q <- CreateTableOne(data=demo_22q_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme"))
+demo_table_22q
+
+demo_table_napls <- CreateTableOne(data=demo_napls_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme"))
+demo_table_napls
+
+#demo_table_c <- CreateTableOne(data=demo_22q_napls, strata="GroupConvert", vars=c("AGE","SEX"))
+#demo_table_c
 ```
 
 
