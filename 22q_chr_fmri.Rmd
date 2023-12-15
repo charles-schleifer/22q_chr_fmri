@@ -1806,17 +1806,57 @@ demo_22q_napls_all <- demo_22q_napls
 
 demo table
 ```{r}
-demo_22q_all <- filter(demo_22q_napls_all, Group %in% c("22qDel", "CONTROL")) %>% droplevels
-demo_napls_all <- filter(demo_22q_napls_all, Group %in% c("CHR", "CONTROL-N")) %>% droplevels
+demo_multisite_bl$Group <- factor(demo_multisite_bl$SUBJECT_IDENTITY,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
+demo_multisite_bl$SEX <- factor(demo_multisite_bl$SEX, levels=c("M","F"))
 
-demo_table_22q <- CreateTableOne(data=demo_22q_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme"))
+#demo_22q_all <- filter(demo_22q_napls_all, Group %in% c("22qDel", "CONTROL")) %>% droplevels
+demo_napls_all <- filter(demo_22q_napls_all, Group %in% c("CHR", "CONTROL-N")) %>% droplevels
+demo_napls_all$conversion <- "N"
+demo_napls_all[which(demo_napls_all$MRI_S_ID %in% convert_ids$MRI_S_ID), "conversion"] <- "Y"
+demo_napls_all$conversion %<>% as.factor
+
+# napls IQ
+napls_neuro <- read_xlsx(file.path(project,"demographics/NAPLS_Neuro_30Jan2018.xlsx"),trim_ws=T, na=c("","NA"), col_names=T)
+napls_neuro1 <- napls_neuro[,c("SiteNumber", "SubjectNumber","VisitLabel","wasiiq")] %>% rename("IQ_full"="wasiiq")
+napls_neuro_id <- merge(x=napls_neuro1, y=napls_id_match, by=c("SiteNumber","SubjectNumber"))
+demo_napls_all <- merge(x=demo_napls_all, y=napls_neuro_id, by="MRI_S_ID")
+
+# napls meds
+napls_meds <- read_xlsx(file.path(project,"demographics/NAPLS2MedsExtraction060616SOPSdatesV1toV7FINALSUMMARY.xlsx"),trim_ws=T, na=c("","NA","#NULL!"), col_names=T)
+napls_meds_use <- napls_meds[,c("SiteNumber","SubjectNumber","Index1_current_AP")]
+napls_meds_use$Med_Antipsychotic <- factor(napls_meds_use$Index1_current_AP, levels=c(0,1,99), labels=c("N","Y","N"))
+demo_napls_all <- merge(x=demo_napls_all, y=napls_meds_use, by=c("SiteNumber","SubjectNumber"))
+
+demo_table_22q <- CreateTableOne(data=demo_multisite_bl, strata="Group", vars=c("AGE","SEX","percent_udvarsme","Med_Antipsychotic","psych_dx", "IQ_full"))
 demo_table_22q
 
-demo_table_napls <- CreateTableOne(data=demo_napls_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme"))
+#demo_table_22q <- CreateTableOne(data=demo_22q_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme"))
+#demo_table_22q
+
+demo_table_napls <- CreateTableOne(data=demo_napls_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme","Med_Antipsychotic","conversion","IQ_full"))
 demo_table_napls
 
-#demo_table_c <- CreateTableOne(data=demo_22q_napls, strata="GroupConvert", vars=c("AGE","SEX"))
-#demo_table_c
+# print tables
+demo_table_22q_f <- print(demo_table_22q, showAllLevels = F, test=F,quote=F, contDigits=1)
+demo_table_n_f <- print(demo_table_napls, showAllLevels = F, test=F,quote=F, contDigits=1)
+demo_table_all <- cbind(demo_table_22q_f,demo_table_n_f)
+colnames(demo_table_all) <- c("22qDel","Control_22q","CHR","Control_CHR")
+rownames(demo_table_all) <- c("n",
+                              "Age, Years, Mean (SD)",
+                              "Sex, Female, n (%)",
+                              "fMRI movement, Mean (SD)",
+                              "Antipsychotic med, n (%)",
+                              "Psychosis diagnosis, n (%)",
+                              "Full Scale IQ, Mean (SD)")
+demo_table_all %<>% as.data.frame
+
+# use gt() to make table for export
+# instructions for bolding specific headers https://gt.rstudio.com/reference/tab_style.html
+demo_table_out <- demo_table_all %>% gt(rownames_to_stub=TRUE) %>% 
+  tab_style(style = cell_text(weight = "bold"),locations = list(cells_stub(), cells_column_labels())) %>%
+  cols_align(align="right", columns=everything())
+
+gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
 ```
 
 
