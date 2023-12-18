@@ -24,7 +24,7 @@ mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla
 if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
 
 # list packages to load
-packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","gghalves","patchwork", "ggrepel", "ggpubr", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
+packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","gghalves","patchwork", "ggrepel", "ggpubr", "gt", "scico", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
 
 # install packages if not yet installed
 all_packages <- rownames(installed.packages())
@@ -1797,6 +1797,20 @@ view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.tit
 view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.title=3, hemisphere="left", fname=file.path(project,"figures/neuromaps//netho_22q_b_l.png"),legend_embed=TRUE, title="22qDel LC")
 ```
 
+neuromaps info table 
+```{r}
+nmap_table <- data.frame(Map=nmap_match$name)
+
+# add description and citation column to input table with Map column
+nmap_table_update <- function(df, map, description, citation){
+  out <- df
+  out[which(out$Map==map),c("Modality", "Citation")] <- c(modality, citation)
+}
+
+nmap_table <- nmap_table_update(df=nmap_table, map="Glucose metabolism", description="", citation="Vaishnavi et al. 2010")
+```
+
+
 prepare data for demo table
 ```{r}
 demo_22q_napls_all <- demo_22q_napls
@@ -1837,10 +1851,10 @@ demo_table_napls <- CreateTableOne(data=demo_napls_all, strata="Group", vars=c("
 demo_table_napls
 
 # print tables
-demo_table_22q_f <- print(demo_table_22q, showAllLevels = F, test=F,quote=F, contDigits=1)
-demo_table_n_f <- print(demo_table_napls, showAllLevels = F, test=F,quote=F, contDigits=1)
-demo_table_all <- cbind(demo_table_22q_f,demo_table_n_f)
-colnames(demo_table_all) <- c("22qDel","Control_22q","CHR","Control_CHR")
+demo_table_22q_f <- print(demo_table_22q, showAllLevels = F, test=T,quote=F, contDigits=1)
+demo_table_n_f <- print(demo_table_napls, showAllLevels = F, test=T,quote=F, contDigits=1)
+demo_table_all <- cbind(demo_table_22q_f[,c("22qDel","CONTROL","p")],demo_table_n_f[,c("CHR","CONTROL-N","p")])
+colnames(demo_table_all) <- c("22qDel","Control-D","p-val-D","CHR","Control-C","p-val-C")
 rownames(demo_table_all) <- c("n",
                               "Age, Years, Mean (SD)",
                               "Sex, Female, n (%)",
@@ -1857,6 +1871,9 @@ demo_table_out <- demo_table_all %>% gt(rownames_to_stub=TRUE) %>%
   cols_align(align="right", columns=everything())
 
 gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
+gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.tex"))
+gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.pdf"))
+gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.rtf"))
 ```
 
 
