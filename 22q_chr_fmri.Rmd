@@ -813,7 +813,9 @@ pal_yellow_orange_red <- function(){
   mycolors <- colorRampPalette(brewer.pal(9,pal))(ncolors)
   return(mycolors)
 }
+```
 
+```{r}
 # plot group difference beta only fdr<0.05
 # 22q RSFA
 pl_rsfa_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta_FDR")
@@ -1292,44 +1294,44 @@ ahbaSurfCABNP_R <- filter(ahbaSurfCABNP, INDEX > 180 & INDEX <= 360)
 
 AHBA partial least squares
 ```{r}
-# function to compare chosen brain map to AHBA with PLS
-ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col, verbose=FALSE){
-  if(verbose==TRUE){print(val_col)}
-  indices <- ahba$INDEX
-  # get list of genes
-  genes <- names(ahba)[which(names(ahba) != "INDEX")]
-  # filter for only rois in ahba data and merge
-  fmap <- filter(map, INDEX %in% indices)[,c("INDEX", val_col)]
-  df <- merge(x=ahba, y=fmap, by="INDEX") 
-  # make pls formula with val_col on left and all genes on right
-  xcols <- paste(genes, collapse=" + ")
-  plsformula <- as.formula(paste(val_col,"~", xcols))
-  # test model with k-fold cross validation using 6 segments
-  pls_test <- plsr(formula=plsformula, data=df, scale=TRUE, center=TRUE, validation="CV", na.action="na.omit", segments=6)
-}
-
-# function to return first component Y R2 from pls model
-# chose components with ncomp, default is just first component
-get_yr2 <- function(input, ncomp=1, estimate="CV"){
-  out <- R2(input, estimate = estimate, intercept = FALSE, ncomp=ncomp)$val %>% drop
-  return(out)
-}
-
-rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
-
-#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "R2")
-#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
-#validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "MSEP")
-
-# x and y total variance explained
-# https://stackoverflow.com/questions/55380244/how-to-get-y-variance-explained-from-a-pls-model
-#y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
-rsfa_y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
-rsfa_x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
-
-gbc_ahba_pls <- ahba_pls(map=gbc_22q_lms, val_col="beta")
-gbc_y_r2 <- get_yr2(input=gbc_ahba_pls, ncomp=1:5)
-gbc_x_r2 <- cumsum(explvar(gbc_ahba_pls))[1:5]/100
+# # function to compare chosen brain map to AHBA with PLS
+# ahba_pls <- function(ahba=ahbaSurfCABNP_L, map, val_col, verbose=FALSE){
+#   if(verbose==TRUE){print(val_col)}
+#   indices <- ahba$INDEX
+#   # get list of genes
+#   genes <- names(ahba)[which(names(ahba) != "INDEX")]
+#   # filter for only rois in ahba data and merge
+#   fmap <- filter(map, INDEX %in% indices)[,c("INDEX", val_col)]
+#   df <- merge(x=ahba, y=fmap, by="INDEX") 
+#   # make pls formula with val_col on left and all genes on right
+#   xcols <- paste(genes, collapse=" + ")
+#   plsformula <- as.formula(paste(val_col,"~", xcols))
+#   # test model with k-fold cross validation using 6 segments
+#   pls_test <- plsr(formula=plsformula, data=df, scale=TRUE, center=TRUE, validation="CV", na.action="na.omit", segments=6)
+# }
+# 
+# # function to return first component Y R2 from pls model
+# # chose components with ncomp, default is just first component
+# get_yr2 <- function(input, ncomp=1, estimate="CV"){
+#   out <- R2(input, estimate = estimate, intercept = FALSE, ncomp=ncomp)$val %>% drop
+#   return(out)
+# }
+# 
+# rsfsa_ahba_pls <- ahba_pls(map=rsfa_22q_lms, val_col="beta")
+# 
+# #validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "R2")
+# #validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "RMSEP")
+# #validationplot(rsfsa_ahba_pls,ncomp =1:5, val.type = "MSEP")
+# 
+# # x and y total variance explained
+# # https://stackoverflow.com/questions/55380244/how-to-get-y-variance-explained-from-a-pls-model
+# #y_r2 <- R2(rsfsa_ahba_pls, estimate = "CV", intercept = FALSE, ncomp=1:5)$val %>% drop 
+# rsfa_y_r2 <- get_yr2(input=rsfsa_ahba_pls, ncomp=1:5)
+# rsfa_x_r2 <- cumsum(explvar(rsfsa_ahba_pls))[1:5]/100
+# 
+# gbc_ahba_pls <- ahba_pls(map=gbc_22q_lms, val_col="beta")
+# gbc_y_r2 <- get_yr2(input=gbc_ahba_pls, ncomp=1:5)
+# gbc_x_r2 <- cumsum(explvar(gbc_ahba_pls))[1:5]/100
 ```
 
 takes too long to compute permutations locally
@@ -1389,7 +1391,6 @@ plot_cor_nulls(test_stat = gbc_y_r2[1], nulls=as.numeric(gbc_nulls[1,]), alterna
 
 ```
 
-univariate AHBA correlations
 ```{r}
 # function to correlate two brain maps
 # map1 and map2 should be same length vectors corresponding to the same parcels
@@ -1403,7 +1404,7 @@ cor_brain_ahba <- function(ahba=ahbaSurfCABNP_L, map, gene, val_col, verbose=FAL
   indices <- ahba$INDEX
   # filter for only rois in ahba data and merge
   fmap <- filter(map, INDEX %in% indices)[,c("INDEX", val_col)]
-  df <- merge(x=ahba, y=fmap, by="INDEX") 
+  df <- merge(x=ahba, y=fmap, by="INDEX")
   out <- cor_brain_maps(map1=df[,val_col], map2=df[,gene]) %>% as.numeric
   return(out)
 }
@@ -1417,77 +1418,78 @@ cor_brain_ahba_all <- function(ahba=ahbaSurfCABNP_L, map, val_col="beta", verbos
 }
 ```
 
+univariate AHBA correlations
 ```{r}
-# get AHBA correlations
-rsfa_ahba_cor <- cor_brain_ahba_all(map=rsfa_22q_lms, verbose=FALSE)
-#plot_cor_nulls(test_stat = 0.1, nulls=rsfa_ahba_cor$cor, alternative = "greater")
-netho_ahba_cor <- cor_brain_ahba_all(map=netho_22q_lms, verbose=FALSE)
-gbc_ahba_cor <- cor_brain_ahba_all(map=gbc_22q_lms, verbose=FALSE)
-
-# write.table(rsfa_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_RSFA_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
-# write.table(netho_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_NetHo_AHBA.csv"), quote=FALSE,  row.names = FALSE, sep=",")
-# write.table(gbc_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_GBC_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
+# # get AHBA correlations
+# rsfa_ahba_cor <- cor_brain_ahba_all(map=rsfa_22q_lms, verbose=FALSE)
+# #plot_cor_nulls(test_stat = 0.1, nulls=rsfa_ahba_cor$cor, alternative = "greater")
+# netho_ahba_cor <- cor_brain_ahba_all(map=netho_22q_lms, verbose=FALSE)
+# gbc_ahba_cor <- cor_brain_ahba_all(map=gbc_22q_lms, verbose=FALSE)
+# 
+# # write.table(rsfa_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_RSFA_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
+# # write.table(netho_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_NetHo_AHBA.csv"), quote=FALSE,  row.names = FALSE, sep=",")
+# # write.table(gbc_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_GBC_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
 
 ```
 
 ```{r}
-# get top 10% absolute value of connections
-get_quantile <- function(data,probs=0.90,alternative="two.sided"){
-  if(alternative=="two.sided"){
-    data <- abs(data)
-  }
-  out <- as.numeric(quantile(data, probs=probs))
-}
-
-# to be run on the output of rsfa_ahba_cor
-get_quantile_genes <- function(df,probs=0.90,alternative="two.sided"){
-  # get correlation value for cutoff
-  threshold <- get_quantile(data=df$cor, probs=probs, alternative=alternative)
-  # get gene names past cutoff
-  if(alternative=="two.sided"){
-    genes <- df[which(abs(df$cor) > threshold),"gene"]
-  }else if(alternative=="greater"){
-    genes <- df[which(df$cor > threshold),"gene"]
-  }else if(alternative=="less"){
-    genes <- df[which(df$cor < threshold),"gene"]
-  }
-  return(genes)
-}
-
-# get top 90th percentile of absolute value correlations for RSFA
-rsfa_ahba_abs90 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.90, alternative="two.sided")
-rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative="two.sided")
+# # get top 10% absolute value of connections
+# get_quantile <- function(data,probs=0.90,alternative="two.sided"){
+#   if(alternative=="two.sided"){
+#     data <- abs(data)
+#   }
+#   out <- as.numeric(quantile(data, probs=probs))
+# }
+# 
+# # to be run on the output of rsfa_ahba_cor
+# get_quantile_genes <- function(df,probs=0.90,alternative="two.sided"){
+#   # get correlation value for cutoff
+#   threshold <- get_quantile(data=df$cor, probs=probs, alternative=alternative)
+#   # get gene names past cutoff
+#   if(alternative=="two.sided"){
+#     genes <- df[which(abs(df$cor) > threshold),"gene"]
+#   }else if(alternative=="greater"){
+#     genes <- df[which(df$cor > threshold),"gene"]
+#   }else if(alternative=="less"){
+#     genes <- df[which(df$cor < threshold),"gene"]
+#   }
+#   return(genes)
+# }
+# 
+# # get top 90th percentile of absolute value correlations for RSFA
+# rsfa_ahba_abs90 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.90, alternative="two.sided")
+# rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative="two.sided")
 
 ```
 
 brainsmash top quantile of univariate tested genes
 ```{r}
-# calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
-map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
-  if(verbose==TRUE){print(variable)}
-  # error if bsmash and ahba have overlapping column names
-  #if(sum(names(bsmash) %in% names(map) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")} 
-  indices <- map$INDEX
-  df <- merge(x=map, y=bsmash, by="INDEX") %>% as.data.frame
-  # compute permuted test stats
-  nulls <- NULL
-  for(i in 1:length(bsmash_cols)){
-    col <- bsmash_cols[i]
-    # print message on the same line for each loop
-    if(verbose==TRUE){
-      cat("\r",col,"...",(i/length(bsmash_cols)*100),"%","\r")
-      flush.console()
-    }
-    null <- cor(x=as.numeric(df[,variable]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
-    nulls <- c(nulls, null)
-  }
-  return(nulls)
-}
-
-# test with only a few permutations
-#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95[1:10], function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE, bsmash_cols=paste0("V",1:10)))
-
-#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(variable=g,map=ahbaSurfCABNP_L, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
+# # calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
+# map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
+#   if(verbose==TRUE){print(variable)}
+#   # error if bsmash and ahba have overlapping column names
+#   #if(sum(names(bsmash) %in% names(map) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")} 
+#   indices <- map$INDEX
+#   df <- merge(x=map, y=bsmash, by="INDEX") %>% as.data.frame
+#   # compute permuted test stats
+#   nulls <- NULL
+#   for(i in 1:length(bsmash_cols)){
+#     col <- bsmash_cols[i]
+#     # print message on the same line for each loop
+#     if(verbose==TRUE){
+#       cat("\r",col,"...",(i/length(bsmash_cols)*100),"%","\r")
+#       flush.console()
+#     }
+#     null <- cor(x=as.numeric(df[,variable]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
+#     nulls <- c(nulls, null)
+#   }
+#   return(nulls)
+# }
+# 
+# # test with only a few permutations
+# #rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95[1:10], function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE, bsmash_cols=paste0("V",1:10)))
+# 
+# #rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(variable=g,map=ahbaSurfCABNP_L, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
 ```
 
 correlate with neuromaps output
@@ -1798,28 +1800,63 @@ view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.ti
 ```
 
 neuromaps info table 
-```{r}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 nmap_table <- data.frame(Map=nmap_match$name)
 
 # add description and citation column to input table with Map column
-nmap_table_update <- function(df, map, description, citation){
-  out <- df
+nmap_table_update <- function(df, map, modality, citation){
+  out <- as.data.frame(df)
   out[which(out$Map==map),c("Modality", "Citation")] <- c(modality, citation)
+  return(as.data.frame(out))
 }
 
-nmap_table <- nmap_table_update(df=nmap_table, map="Glucose metabolism", description="", citation="Vaishnavi et al. 2010")
+nmap_table <- nmap_table_update(df=nmap_table, map="Glucose metabolism", modality="PET", citation="Vaishnavi et al. 2010")
+nmap_table <- nmap_table_update(df=nmap_table, map="Oxygen metabolism", modality="PET", citation="Vaishnavi et al. 2010")
+nmap_table <- nmap_table_update(df=nmap_table, map="Cerebral blood flow", modality="PET", citation="Vaishnavi et al. 2010")
+nmap_table <- nmap_table_update(df=nmap_table, map="Cerebral blood volume", modality="PET", citation="Vaishnavi et al. 2010")
+nmap_table <- nmap_table_update(df=nmap_table, map="PC1 gene expression", modality="mRNA", citation="Markello et al. 2021")
+nmap_table <- nmap_table_update(df=nmap_table, map="PVALB-SST gradient", modality="mRNA", citation="Markello et al. 2021")
+nmap_table <- nmap_table_update(df=nmap_table, map="fMRI gradient", modality="fMRI", citation="Margulies et al. 2016")
+nmap_table <- nmap_table_update(df=nmap_table, map="Intersubject variability", modality="fMRI", citation="Mueller et al. 2013")
+nmap_table <- nmap_table_update(df=nmap_table, map="PC1 neurosynth", modality="fMRI", citation="Yarkoni et al. 2011")
+nmap_table <- nmap_table_update(df=nmap_table, map="Allometric scaling (PNC)", modality="sMRI", citation="Reardon et al. 2018")
+nmap_table <- nmap_table_update(df=nmap_table, map="Allometric scaling (NIH)", modality="sMRI", citation="Reardon et al. 2018")
+nmap_table <- nmap_table_update(df=nmap_table, map="Developmental expansion", modality="sMRI", citation="Hill et al. 2010")
+nmap_table <- nmap_table_update(df=nmap_table, map="Evolutionary expansion", modality="sMRI", citation="Hill et al. 2010")
+nmap_table <- nmap_table_update(df=nmap_table, map="Cortical thickness", modality="sMRI", citation="Glasser et al. 2016")
+nmap_table <- nmap_table_update(df=nmap_table, map="T1w/T2w ratio", modality="sMRI", citation="Glasser et al. 2016")
+nmap_table <- nmap_table_update(df=nmap_table, map="MEG delta", modality="MEG", citation="Van Essen et al. 2013")
+nmap_table <- nmap_table_update(df=nmap_table, map="MEG theta", modality="MEG", citation="Van Essen et al. 2013")
+nmap_table <- nmap_table_update(df=nmap_table, map="MEG alpha", modality="MEG", citation="Van Essen et al. 2013")
+nmap_table <- nmap_table_update(df=nmap_table, map="MEG beta", modality="MEG", citation="Van Essen et al. 2013")
+nmap_table <- nmap_table_update(df=nmap_table, map="MEG gamma1", modality="MEG", citation="Van Essen et al. 2013")
+nmap_table <- nmap_table_update(df=nmap_table, map="MEG gamma2", modality="MEG", citation="Van Essen et al. 2013")
+nmap_table <- nmap_table_update(df=nmap_table, map="ROI size", modality="sMRI", citation="Glasser et al. 2016")
+
+# output table
+nmap_table_out <- nmap_table %>% gt() %>% 
+  tab_style(style = cell_text(weight = "bold"),locations = list(cells_column_labels())) %>%
+  cols_align(align="left", columns=everything())
+
+# fix to stop gtsave from erroring
+# https://github.com/rstudio/gt/issues/1077
+# https://stackoverflow.com/questions/73964325/error-in-sclose-attempt-to-apply-non-function-when-calling-gtsave
+#f <- chromote::default_chromote_object()
+#f$close()
+
+gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.png"))
+gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.tex"))
+gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.pdf"))
+gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.rtf"))
 ```
 
 
-prepare data for demo table
-```{r}
-demo_22q_napls_all <- demo_22q_napls
-
-```
 
 
 demo table
 ```{r}
+demo_22q_napls_all <- demo_22q_napls
+
 demo_multisite_bl$Group <- factor(demo_multisite_bl$SUBJECT_IDENTITY,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
 demo_multisite_bl$SEX <- factor(demo_multisite_bl$SEX, levels=c("M","F"))
 
