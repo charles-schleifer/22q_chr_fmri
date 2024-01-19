@@ -24,7 +24,7 @@ mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla
 if(length(list.files(hoffman)) == 0){system(mntcommand)}else{print(paste(hoffman,"is not empty...skipping SSHFS step"))}
 
 # list packages to load
-packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","gghalves","patchwork", "ggrepel", "ggpubr", "gt", "scico", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls", "parallel")
+packages <- c("devtools","conflicted","here","magrittr", "dplyr", "tidyr","readxl", "ggplot2","gghalves","patchwork", "ggrepel", "ggpubr", "gt", "scico", "RColorBrewer", "ciftiTools", "tableone", "data.table", "reshape2", "neuroCombat", "pls")
 
 # install packages if not yet installed
 all_packages <- rownames(installed.packages())
@@ -60,6 +60,9 @@ if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
 rgl::setupKnitr()
 rgl::rgl.open(); rgl::rgl.close()
 
+# load data instead of loading individual files
+# load(file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"))
+# load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
 ```
 
 get subject IDs and load demographic data
@@ -1920,12 +1923,6 @@ gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1
 
 
 
-
-load data (instead of loading individual files from hoffman)
-```{r message=TRUE, warning=FALSE}
-# load(file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"))
-# load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
-```
 
 
 
