@@ -60,7 +60,7 @@ if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
 rgl::setupKnitr()
 rgl::rgl.open(); rgl::rgl.close()
 
-# load data instead of loading individual files
+# load Rdata instead of loading individual files
 # load(file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"))
 # load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
 ```
