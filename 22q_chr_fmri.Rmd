@@ -1910,11 +1910,25 @@ demo_table_out <- demo_table_all %>% gt(rownames_to_stub=TRUE) %>%
   tab_style(style = cell_text(weight = "bold"),locations = list(cells_stub(), cells_column_labels())) %>%
   cols_align(align="right", columns=everything())
 
-gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
-gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.tex"))
-gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.pdf"))
-gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.rtf"))
+# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
+# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.tex"))
+# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.pdf"))
+# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.rtf"))
 ```
+
+## Supplemental analyses
+
+within 22qDel group, LM comparing with/without congenital cardiac Dx
+```{r}
+
+# get main effects of group for each measure
+# TODO: add cardiac status to rsfa_wide$df, need new group column for +/- congenital heart Dx, filter for only 22qDel
+rsfa_22q_heart <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
+
+
+
+```
+
 
 
 
