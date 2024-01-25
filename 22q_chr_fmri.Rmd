@@ -17,7 +17,7 @@ uname <- "schleife"
 # set local path to mount server
 hoffman <- "~/Desktop/hoffman_mount"
 # create directory if needed 
-if(!file.exists(hoffman)){dir.create(hoffman)}
+# if(!file.exists(hoffman)){dir.create(hoffman)}
 # make string to run as system command
 mntcommand <- paste0("umount -f ", hoffman,"; sshfs ",uname,"@hoffman2.idre.ucla.edu:/u/project/cbearden/data ",hoffman)
 # if hoffman directory is empty, use system command and sshfs to mount server, if not empty assume already mounted and skip
@@ -720,8 +720,6 @@ test linear models for 22q vs TD and CHR vs TD separately
 lm_parcel_group_covars <- function(df, var, predictors, groups, groupcol, refgroup){
   # create formula with var on left side and predictors string on right
   form <- reformulate(predictors,response=var)
-  #print(form)
-  #print(form)
   # test linear model
   lm <- lm(formula=form,data=df, na.action="na.omit")
   slm <- summary(lm)
@@ -729,8 +727,6 @@ lm_parcel_group_covars <- function(df, var, predictors, groups, groupcol, refgro
   g <- groups[which(groups != refgroup)]
   gname <- paste0(groupcol,g)
   g_stats <- slm$coefficients[gname,] %>% t %>% as.data.frame
-  print(g_stats)
-  class(g_stats)
   colnames(g_stats) <- c("group_beta","group_se","group_t","group_p")
   # get stats for site effects
   srows <- grep("Site*", rownames(slm$coefficients))
@@ -790,35 +786,35 @@ get_parcel_group_lm <- function(list,
 
 # get main effects of group for each measure
 rsfa_22q_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA 22q significant regions:",sum(rsfa_22q_lms$FDR_sig)))
+print(paste("RSFA 22q significant regions:",sum(rsfa_22q_lms$group_FDR_sig)))
 
-rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL-N"), refgroup="CONTROL-N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA CHR significant regions:",sum(rsfa_chr_lms$FDR_sig)))
+rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL-N"), refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("RSFA CHR significant regions:",sum(rsfa_chr_lms$group_FDR_sig)))
 
 netho_22q_lms <- get_parcel_group_lm(list=netho_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo 22q significant regions:",sum(netho_22q_lms$FDR_sig, na.rm=TRUE)))
+print(paste("NetHo 22q significant regions:",sum(netho_22q_lms$group_FDR_sig, na.rm=TRUE)))
 
 netho_chr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHR","CONTROL-N"), refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo CHR significant regions:",sum(netho_chr_lms$FDR_sig, na.rm=TRUE)))
+print(paste("NetHo CHR significant regions:",sum(netho_chr_lms$group_FDR_sig, na.rm=TRUE)))
 
-gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("GBC 22q significant regions:",sum(gbc_22q_lms$FDR_sig)))
+gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("GBC 22q significant regions:",sum(gbc_22q_lms$group_FDR_sig)))
 
 gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL-N"), refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$FDR_sig)))
+print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$group_FDR_sig)))
 
 ```
 
 test CHRc vs TD
 ```{r}
-rsfa_chrc_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA CHRc significant regions:",sum(rsfa_chrc_lms$FDR_sig)))
+rsfa_chrc_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("RSFA CHRc significant regions:",sum(rsfa_chrc_lms$group_FDR_sig)))
 
-netho_chrc_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo CHRc significant regions:",sum(netho_chrc_lms$FDR_sig)))
+netho_chrc_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("NetHo CHRc significant regions:",sum(netho_chrc_lms$group_FDR_sig)))
 
-gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert",refgroup="CONTROL-N",roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("GBC CHRc significant regions:",sum(gbc_chrc_lms$FDR_sig)))
+gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("GBC CHRc significant regions:",sum(gbc_chrc_lms$group_FDR_sig)))
 
 ```
 
@@ -1957,14 +1953,26 @@ rsfa_22q_heart <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL
 ```
 
 collect main effect of site from models
-```{r}
+```{r paged.print=FALSE}
+# function to get columns with site p-values (for only regions with FDR significant main effect of group)
+get_site_p <- function(df, roicols=c("INDEX","LABEL","HEMISPHERE","NETWORK","NETWORKKEY","GLASSERLABELNAME","group_FDR_sig")){
+  cols <- colnames(df)
+  # filter for group significance
+  gsig <- filter(df, group_FDR_sig==TRUE)
+  # get all columns starting with Site and ending with _p
+  scols <- grep("Site.*_p",cols, value=TRUE)
+  # get all pvals
+  sp_all <- gsig[,scols] %>% as.vector() %>% unlist %>% as.numeric()
+  # return list object with data frame and vector of all site p-values
+  out <- list(df=gsig[,c(roicols,scols)], all_p=sp_all)
+  return(out)
+}
 
-rsfa_22q_lms 
-rsfa_chr_lms 
-netho_22q_lms 
-netho_chr_lms 
-gbc_22q_lms 
-gbc_chr_lms 
+# get site p-values for each measure
+site_p_all <- lapply(list(rsfa_22q_lms, rsfa_chr_lms, netho_22q_lms, netho_chr_lms, gbc_22q_lms, gbc_chr_lms), get_site_p)
+
+# get smallest p-value for each measure
+site_p_mins <- lapply(site_p_all, function(s) min(s$all_p))
 
 ```
 
