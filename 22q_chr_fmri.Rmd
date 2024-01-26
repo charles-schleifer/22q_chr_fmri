@@ -118,7 +118,8 @@ napls_sessions <- napls_sessions[! napls_sessions %in% exclude_sessions]
 all_sessions <- c(trio_sessions,prisma_sessions,suny_sessions,rome_sessions,iop_sessions, napls_sessions)
 
 # read multisite demo table
-demo_multisite <- read.csv(file.path(project,"demographics/multisite/22q_multisite_demo_f31.csv"))
+#demo_multisite <- read.csv(file.path(project,"demographics/multisite/22q_multisite_demo_f31.csv"))
+demo_multisite <- read.csv(file.path(project,"demographics/multisite/22q_multisite_demo.csv"))
 # exclude listed sessions if any are in list
 #demo_multisite <- demo_multisite[! demo_multisite$MRI_S_ID %in% exclude_sessions,]
 # include only subject with mri
@@ -232,6 +233,7 @@ demo_22q_napls_all <- demo_22q_napls
 
 demo_multisite_bl$Group <- factor(demo_multisite_bl$SUBJECT_IDENTITY,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
 demo_multisite_bl$SEX <- factor(demo_multisite_bl$SEX, levels=c("M","F"))
+demo_multisite_bl$cardiac <- factor(demo_multisite_bl$cardiac, levels=c(0,1), labels=c("N","Y"))
 
 #demo_22q_all <- filter(demo_22q_napls_all, Group %in% c("22qDel", "CONTROL")) %>% droplevels
 demo_napls_all <- filter(demo_22q_napls_all, Group %in% c("CHR", "CONTROL-N")) %>% droplevels
@@ -251,11 +253,8 @@ napls_meds_use <- napls_meds[,c("SiteNumber","SubjectNumber","Index1_current_AP"
 napls_meds_use$Med_Antipsychotic <- factor(napls_meds_use$Index1_current_AP, levels=c(0,1,99), labels=c("N","Y","N"))
 demo_napls_all <- merge(x=demo_napls_all, y=napls_meds_use, by=c("SiteNumber","SubjectNumber"))
 
-demo_table_22q <- CreateTableOne(data=demo_multisite_bl, strata="Group", vars=c("AGE","SEX","percent_udvarsme","Med_Antipsychotic","psych_dx", "IQ_full"))
+demo_table_22q <- CreateTableOne(data=demo_multisite_bl, strata="Group", vars=c("AGE","SEX","percent_udvarsme","Med_Antipsychotic","psych_dx", "IQ_full", "cardiac"))
 demo_table_22q
-
-#demo_table_22q <- CreateTableOne(data=demo_22q_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme"))
-#demo_table_22q
 
 demo_table_napls <- CreateTableOne(data=demo_napls_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme","Med_Antipsychotic","conversion","IQ_full"))
 demo_table_napls
@@ -263,15 +262,17 @@ demo_table_napls
 # print tables
 demo_table_22q_f <- print(demo_table_22q, showAllLevels = F, test=T,quote=F, contDigits=1)
 demo_table_n_f <- print(demo_table_napls, showAllLevels = F, test=T,quote=F, contDigits=1)
+demo_table_n_f <- rbind(demo_table_n_f,"-")
 demo_table_all <- cbind(demo_table_22q_f[,c("22qDel","CONTROL","p")],demo_table_n_f[,c("CHR","CONTROL-N","p")])
-colnames(demo_table_all) <- c("22qDel","Control-D","p-val-D","CHR","Control-C","p-val-C")
+colnames(demo_table_all) <- c("22qDel","Control22q","p-val-22q","CHR","ControlCHR","p-val-CHR")
 rownames(demo_table_all) <- c("n",
                               "Age, Years, Mean (SD)",
                               "Sex, Female, n (%)",
                               "fMRI movement, Mean (SD)",
                               "Antipsychotic med, n (%)",
                               "Psychosis diagnosis, n (%)",
-                              "Full Scale IQ, Mean (SD)")
+                              "Full Scale IQ, Mean (SD)",
+                              "Congenital cardiac diagnosis, n (%)")
 demo_table_all %<>% as.data.frame
 
 # use gt() to make table for export
@@ -281,9 +282,7 @@ demo_table_out <- demo_table_all %>% gt(rownames_to_stub=TRUE) %>%
   cols_align(align="right", columns=everything())
 
 # gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
-# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.tex"))
-# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.pdf"))
-# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.rtf"))
+# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.docx"))
 ```
 
 load fMRI data
@@ -2046,8 +2045,11 @@ psych_22q_gbc_sig <- filter(gbc_22q_psych, group_FDR_sig==TRUE)
 psych_22q_gbc_mods <-lapply(psych_22q_gbc_sig$indexcol, function(i) summary(lm_parcel_group_covars(df=filter(add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="psych_dx")$df, Group=="22qDel"), var=i,predictors="psych_dx + AGE + AGE2 + SEX + Site + percent_udvarsme", groupcol="psych_dx", groups=c("Y","N"), refgroup="N", test_out_model=TRUE)))
 
 # plot
-pl_gbc_22q_psych <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_psych, roi_col="INDEX", val_col="group_beta_FDR")
-view_xifti_surface(pl_gbc_22q_psych, title="Global Connectivity: 22qDel PS+ vs PS- (FDR q<0.05)", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+pl_gbc_22q_psych_fdrb <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_psych, roi_col="INDEX", val_col="group_beta_FDR")
+view_xifti_surface(pl_gbc_22q_psych_fdrb, title="Global Connectivity: 22qDel PS+ vs PS- (FDR q<0.05)", cex.title=1.3,zlim=c(-1.1,1.1), colors=pal_red_blue())
+
+pl_gbc_22q_psych_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_psych, roi_col="INDEX", val_col="group_beta")
+view_xifti_surface(pl_gbc_22q_psych_b, title="Global Connectivity: 22qDel PS+ vs PS- ", cex.title=1.3,zlim=c(-1.1,1.1), colors=pal_red_blue())
 ```
 
 lm of IQ in each group
