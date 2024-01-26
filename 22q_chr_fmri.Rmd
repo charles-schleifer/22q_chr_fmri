@@ -1531,7 +1531,7 @@ cor_brain_ahba <- function(ahba=ahbaSurfCABNP_L, map, gene, val_col, verbose=FAL
   return(out)
 }
 
-cor_brain_ahba_all <- function(ahba=ahbaSurfCABNP_L, map, val_col="beta", verbose=FALSE){
+cor_brain_ahba_all <- function(ahba=ahbaSurfCABNP_L, map, val_col="group_beta", verbose=FALSE){
   # get list of genes
   genes <- names(ahba)[which(names(ahba) != "INDEX")]
   cors <- lapply(genes, function(g) cor_brain_ahba(gene=g, map=map, val_col=val_col, verbose=verbose)) %>% unlist
@@ -1582,34 +1582,34 @@ univariate AHBA correlations
 # rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative="two.sided")
 ```
 
-brainsmash top quantile of univariate tested genes
+calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
 ```{r}
-# # calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
-# map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
-#   if(verbose==TRUE){print(variable)}
-#   # error if bsmash and ahba have overlapping column names
-#   #if(sum(names(bsmash) %in% names(map) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")} 
-#   indices <- map$INDEX
-#   df <- merge(x=map, y=bsmash, by="INDEX") %>% as.data.frame
-#   # compute permuted test stats
-#   nulls <- NULL
-#   for(i in 1:length(bsmash_cols)){
-#     col <- bsmash_cols[i]
-#     # print message on the same line for each loop
-#     if(verbose==TRUE){
-#       cat("\r",col,"...",(i/length(bsmash_cols)*100),"%","\r")
-#       flush.console()
-#     }
-#     null <- cor(x=as.numeric(df[,variable]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
-#     nulls <- c(nulls, null)
-#   }
-#   return(nulls)
-# }
-# 
-# # test with only a few permutations
-# #rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95[1:10], function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE, bsmash_cols=paste0("V",1:10)))
-# 
-# #rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(variable=g,map=ahbaSurfCABNP_L, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
+# permutation correlation 
+map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
+  if(verbose==TRUE){print(variable)}
+  # error if bsmash and ahba have overlapping column names
+  #if(sum(names(bsmash) %in% names(map) & names(bsmash) != "INDEX") != 0){stop("Error: bsmash and ahba have overlapping column names")}
+  indices <- map$INDEX
+  df <- merge(x=map, y=bsmash, by="INDEX") %>% as.data.frame
+  # compute permuted test stats
+  nulls <- NULL
+  for(i in 1:length(bsmash_cols)){
+    col <- bsmash_cols[i]
+    # print message on the same line for each loop
+    if(verbose==TRUE){
+      cat("\r",col,"...",(i/length(bsmash_cols)*100),"%","\r")
+      flush.console()
+    }
+    null <- cor(x=as.numeric(df[,variable]), y=as.numeric(df[,col]), use=use, method=method) %>% as.numeric
+    nulls <- c(nulls, null)
+  }
+  return(nulls)
+}
+
+# test with only a few permutations
+#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95[1:10], function(g) ahba_permute_cor(gene=g, bsmash=rsfa_22q_bsmash_L, verbose=TRUE, bsmash_cols=paste0("V",1:10)))
+
+#rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(variable=g,map=ahbaSurfCABNP_L, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
 ```
 
 correlate with neuromaps output
@@ -1653,7 +1653,7 @@ netho_chr_nmap <- cabnp_hcp_lh(cabnp_df=netho_chr_lms, hcp_df=neuromaps)
 gbc_chr_nmap <- cabnp_hcp_lh(cabnp_df=gbc_chr_lms, hcp_df=neuromaps)
 
 # get neuromap df without fMRI result
-neuromaps_ordered <- subset(data.table(rsfa_22q_nmap), select=-c(beta, FDR_q, FDR_sig, beta_FDR, se, t, p))
+neuromaps_ordered <- subset(data.table(rsfa_22q_nmap), select=-c(group_beta, group_FDR_q, group_FDR_sig, group_beta_FDR, group_se, group_t, group_p))
 
 # correlate with nmap columns
 nmap_cor <- function(map1, map_all, method="pearson", use="complete.obs", cols=nmap_cols){
@@ -1664,13 +1664,13 @@ nmap_cor <- function(map1, map_all, method="pearson", use="complete.obs", cols=n
   return(out)
 }
 
-rsfa_22q_nmap_cor <- nmap_cor(map1=rsfa_22q_nmap$beta, map_all=rsfa_22q_nmap, method="pearson", use="complete.obs")
-netho_22q_nmap_cor <- nmap_cor(map1=netho_22q_nmap$beta, map_all=netho_22q_nmap, method="pearson", use="complete.obs")
-gbc_22q_nmap_cor <- nmap_cor(map1=gbc_22q_nmap$beta, map_all=gbc_22q_nmap, method="pearson", use="complete.obs")
+rsfa_22q_nmap_cor <- nmap_cor(map1=rsfa_22q_nmap$group_beta, map_all=rsfa_22q_nmap, method="pearson", use="complete.obs")
+netho_22q_nmap_cor <- nmap_cor(map1=netho_22q_nmap$group_beta, map_all=netho_22q_nmap, method="pearson", use="complete.obs")
+gbc_22q_nmap_cor <- nmap_cor(map1=gbc_22q_nmap$group_beta, map_all=gbc_22q_nmap, method="pearson", use="complete.obs")
 
-rsfa_chr_nmap_cor <- nmap_cor(map1=rsfa_chr_nmap$beta, map_all=rsfa_chr_nmap, method="pearson", use="complete.obs")
-netho_chr_nmap_cor <- nmap_cor(map1=netho_chr_nmap$beta, map_all=netho_chr_nmap, method="pearson", use="complete.obs")
-gbc_chr_nmap_cor <- nmap_cor(map1=gbc_chr_nmap$beta, map_all=gbc_chr_nmap, method="pearson", use="complete.obs")
+rsfa_chr_nmap_cor <- nmap_cor(map1=rsfa_chr_nmap$group_beta, map_all=rsfa_chr_nmap, method="pearson", use="complete.obs")
+netho_chr_nmap_cor <- nmap_cor(map1=netho_chr_nmap$group_beta, map_all=netho_chr_nmap, method="pearson", use="complete.obs")
+gbc_chr_nmap_cor <- nmap_cor(map1=gbc_chr_nmap$group_beta, map_all=gbc_chr_nmap, method="pearson", use="complete.obs")
 
 # plot
 # pl_cmruglu <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_nmap, roi_col="INDEX", val_col="cmruglu")
@@ -2074,6 +2074,7 @@ gbc_22q_psych <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo
 print(paste("GBC 22q significant psychosis effects:",sum(gbc_22q_psych$group_FDR_sig)))
 
 ```
+
 investigate psychosis GBC effect in 22q further (only 16 people with psychosis though)
 ```{r}
 # get significant regions
