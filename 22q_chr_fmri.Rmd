@@ -2151,9 +2151,9 @@ print(paste("GBC Control-CHR significant IQ effects:",sum(gbc_ctrlchr_iq$IQ_full
 lm of SIPS positive for regions with significant CHR effect on LC
 ```{r}
 # add a sips positive column for demo_napls_all
-sips # TODO read sips
-demo_napls_sips <- merge(x=demo_napls_all, y=sips, by="MRI_S_ID")
-
-netho_chr_sipsp <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_sips), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
+# sips # TODO read sips
+# demo_napls_sips <- merge(x=demo_napls_all, y=sips, by="MRI_S_ID")
+# 
+# netho_chr_sipsp <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_sips), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
 
 ```
