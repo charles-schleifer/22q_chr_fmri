@@ -757,15 +757,25 @@ get_parcel_group_lm <- function(list,
                                 covars="AGE + AGE2 + SEX + Site + percent_udvarsme", 
                                 alpha=0.05, 
                                 roi_key=ji_key,
-                                prefix="r_"){
+                                prefix="r_",
+                                filter=FALSE,
+                                filtercol="",
+                                filterin=""){
   if(length(groups)!=2){ stop("Error: number of groups not equal to 2")}
   # add group to string of model variables
   predictors <- paste(groupcol, "+", covars)
   # filter by specified groups and relevel factor
   df_all <- as.data.frame(list$df)
   df_all$groupcol <- df_all[,groupcol]
-  df <- filter(df_all, groupcol %in% groups)
-  df[,groupcol] <- relevel(df[,groupcol], ref=refgroup)
+  # filter data based to keep only rows wither value of filtercol is in filterin
+  if(filter==TRUE){
+    dff <- df_all %>% filter(.data[[filtercol]] %in% filterin)
+  }else{
+    dff <- df_all
+  }
+  # filter groupcol in groups
+  df <- filter(dff, groupcol %in% groups)
+  df[,groupcol] <- relevel(as.factor(df[,groupcol]), ref=refgroup)
   # relevel site
   df[,sitecol] <- relevel(as.factor(df[,sitecol]), ref=refsite)
   # do linear model for every parcel, FDR correct p-values, and create column of betas set to NA when not FDR significant
@@ -1940,18 +1950,6 @@ gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.rt
 
 
 ## Supplemental analyses
-
-within 22qDel group, LM comparing with/without congenital cardiac Dx
-```{r}
-
-# get main effects of group for each measure
-# TODO: add cardiac status to rsfa_wide$df, need new group column for +/- congenital heart Dx, filter for only 22qDel
-rsfa_22q_heart <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
-
-
-
-```
-
 collect main effect of site from models
 ```{r paged.print=FALSE}
 # function to get columns with site p-values (for only regions with FDR significant main effect of group)
@@ -1976,10 +1974,121 @@ site_p_mins <- lapply(site_p_all, function(s) min(s$all_p))
 
 ```
 
+within 22qDel and CHR groups, LM comparing with/without antipsychotic meds
+```{r}
+
+# function to add med status to results dfs, filter for only 22qDel/CHR
+add_demo_cols <- function(list, demo, democols=c("Med_Antipsychotic","IQ_full"), idcol="MRI_S_ID"){
+  out <- list
+  out$df <- merge(x=out$df, y=demo[,c(idcol, democols)], by=idcol)
+  return(out)
+}
+ 
+# test linear model comparing yes/no meds within patients
+rsfa_22q_med <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl), groupcol="Med_Antipsychotic", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("RSFA 22q significant med effects:",sum(rsfa_22q_med$group_FDR_sig)))
+
+rsfa_chr_med <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_napls_all), groupcol="Med_Antipsychotic", groups=c("Y","N"), refgroup="N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
+print(paste("RSFA CHR significant med effects:",sum(rsfa_chr_med$group_FDR_sig)))
+
+netho_22q_med <- get_parcel_group_lm(list=add_demo_cols(list=netho_wide, demo=demo_multisite_bl), groupcol="Med_Antipsychotic", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("NetHo 22q significant med effects:",sum(netho_22q_med$group_FDR_sig)))
+
+netho_chr_med <- get_parcel_group_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_all), groupcol="Med_Antipsychotic", groups=c("Y","N"), refgroup="N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
+print(paste("NetHo CHR significant med effects:",sum(netho_chr_med$group_FDR_sig)))
+
+gbc_22q_med <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_multisite_bl), groupcol="Med_Antipsychotic", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("GBC 22q significant med effects:",sum(gbc_22q_med$group_FDR_sig)))
+
+gbc_chr_med <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_napls_all), groupcol="Med_Antipsychotic", groups=c("Y","N"), refgroup="N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
+print(paste("GBC CHR significant med effects:",sum(gbc_chr_med$group_FDR_sig)))
+
+```
+
+within 22qDel group, LM comparing with/without congenital cardiac Dx
+```{r}
+
+# get main effects of group for each measure
+# TODO: add cardiac status to rsfa_wide$df, need new group column for +/- congenital heart Dx, filter for only 22qDel
+rsfa_22q_heart <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
 
 
 
+```
 
+lm of IQ in each group
+```{r}
+# function to return beta coefficient for group in a lm predicting MRI from chosen predictors
+lm_parcel_bhv_covars <- function(df, var, predictors, statname="IQ_full"){
+  # create formula with var on left side and predictors string on right
+  form <- reformulate(predictors,response=var)
+  # test linear model
+  lm <- lm(formula=form,data=df, na.action="na.omit")
+  slm <- summary(lm)
+  # # get stats for main effect of group
+  # g <- groups[which(groups != refgroup)]
+  # gname <- paste0(groupcol,g)
+  # g_stats <- slm$coefficients[gname,] %>% t %>% as.data.frame
+  # colnames(g_stats) <- c("group_beta","group_se","group_t","group_p")
+  # # get stats for site effects
+  # srows <- grep("Site*", rownames(slm$coefficients))
+  # s_stats <- slm$coefficients[srows,]
+  # colnames(s_stats) <- c("beta","se","t","p")
+  # # convert rows to columns
+  # s_out <- data.frame()
+  # for(r in 1:nrow(s_stats)){
+  #   rname <- rownames(s_stats)[r]
+  #   cnames <- paste0(rname,"_",colnames(s_stats))
+  #   s_out[1,cnames] <- s_stats[r,] 
+  # }
+  # # add outputs together
+  out <- slm$coefficients[statname,] %>% t %>% as.data.frame
+  colnames(out) <- paste0(statname,c("_beta","_se","_t","_p"))
+  return(out)
+}
+#test <- lm_parcel_bhv_covars(df=filter(add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl)$df, Group %in% c("22qDel")), var="r_1",predictors="IQ_full + SEX + Site + percent_udvarsme") 
+
+
+# function to apply lm at each parcel, expects list object output from rows_to_cols
+# defaults, including formula predictors, are set in function but different values can be specified
+# groups should be a vector specifying which groups should be ussed
+get_parcel_bhv_lm <- function(list,
+                                sitecol="Site",
+                                refsite,
+                                covars="SEX + Site + percent_udvarsme", 
+                                alpha=0.05, 
+                                roi_key=ji_key,
+                                prefix="r_",
+                                filter=FALSE,
+                                filtercol="",
+                                filterin="",
+                                statname="IQ_full"){
+  # add group to string of model variables
+  predictors <- paste(statname, "+", covars)
+  # filter by specified groups and relevel factor
+  df_all <- as.data.frame(list$df)
+  # filter data based to keep only rows wither value of filtercol is in filterin
+  if(filter==TRUE){
+    dff <- df_all %>% filter(.data[[filtercol]] %in% filterin)
+  }else{
+    dff <- df_all
+  }
+  # relevel site
+  df[,sitecol] <- relevel(as.factor(df[,sitecol]), ref=refsite)
+  # do linear model for every parcel, FDR correct p-values, and create column of betas set to NA when not FDR significant
+  parc_cols <- list$parcels
+  stats <- lapply(parc_cols, function(v) lm_parcel_bhv_covars(var=v, df=df, predictors=predictors, statname=statname)) %>% do.call(rbind,.) %>% as.data.frame
+  stats$indexcol <- parc_cols
+  stats$INDEX <- gsub(prefix,"",stats$indexcol)
+  out <- merge(x=roi_key, y=stats, by="INDEX", all.x=TRUE, all.y=TRUE)
+  return(out)
+}
+
+rsfa_22q_iq <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+
+
+
+```
 
 
 
