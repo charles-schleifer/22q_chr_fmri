@@ -515,7 +515,7 @@ run_neurocombat <- function(input,
   subcols <- which(names(input_subcols)!= index_col)
   subnames <- names(input_subcols)[subcols]
 
-    # get covariates from multisite baseline demo df, ordered the same as subject ID columns for input to neurocombat
+  # get covariates from multisite baseline demo df, ordered the same as subject ID columns for input to neurocombat
   covardf <- merge(x=data.frame(subnames), y=demo[,c(covars,site_column,id_col)], by.x="subnames", by.y=id_col, all.x=TRUE)
   # drop unused groups to avoid unnecessary factors in model
   covardf$Group %<>% droplevels()
@@ -717,7 +717,7 @@ gbc_wide <- rows_to_cols(results=gbc_norm, demo=demo_22q_napls)
 test linear models for 22q vs TD and CHR vs TD separately
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to return beta coefficient for group in a lm predicting MRI from chosen predictors
-lm_parcel_group_covars <- function(df, var, predictors, groups, groupcol, refgroup){
+lm_parcel_group_covars <- function(df, var, predictors, groups, groupcol, refgroup, test_out_model=FALSE){
   # create formula with var on left side and predictors string on right
   form <- reformulate(predictors,response=var)
   # test linear model
@@ -739,8 +739,13 @@ lm_parcel_group_covars <- function(df, var, predictors, groups, groupcol, refgro
     cnames <- paste0(rname,"_",colnames(s_stats))
     s_out[1,cnames] <- s_stats[r,] 
   }
-  # add outputs together
-  out <- cbind(g_stats,s_out)
+  # option to return full model instead of table for testing purposes
+  if(test_out_model==TRUE){
+    out <- lm
+  }else{
+    # add outputs together
+    out <- cbind(g_stats,s_out)
+  }
   return(out)
 }
 #test <- lm_parcel_group_covars(df=filter(rsfa_wide$df, Group %in% c("22qDel","CONTROL")), var="r_1",predictors="Group + AGE + AGE2 + SEX + Site + percent_udvarsme",groupcol="Group", groups=c("22qDel","CONTROL"), refgroup="22qDel") 
@@ -2016,6 +2021,25 @@ rsfa_22q_heart <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL
 
 ```
 
+psychosis dx relationships in 22q
+```{r}
+# test linear model comparing psychosis dx within patients
+rsfa_22q_psych <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="psych_dx"), groupcol="psych_dx", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("RSFA 22q significant psychosis effects:",sum(rsfa_22q_psych$group_FDR_sig)))
+
+netho_22q_psych <- get_parcel_group_lm(list=add_demo_cols(list=netho_wide, demo=demo_multisite_bl, democols="psych_dx"), groupcol="psych_dx", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("NetHo 22q significant psychosis effects:",sum(netho_22q_psych$group_FDR_sig)))
+
+gbc_22q_psych <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="psych_dx"), groupcol="psych_dx", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("GBC 22q significant psychosis effects:",sum(gbc_22q_psych$group_FDR_sig)))
+
+```
+investigate psychosis GBC effect in 22q further
+```{r}
+test <- lm_parcel_group_covars(df=filter(add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="psych_dx")$df, Group=="22qDel"), var="r_65",predictors="psych_dx + AGE + AGE2 + SEX + Site + percent_udvarsme", groupcol="psych_dx", groups=c("Y","N"), refgroup="N", test_out_model=TRUE) 
+
+```
+
 lm of IQ in each group
 ```{r}
 # function to return beta coefficient for group in a lm predicting MRI from chosen predictors
@@ -2069,9 +2093,9 @@ get_parcel_bhv_lm <- function(list,
   df_all <- as.data.frame(list$df)
   # filter data based to keep only rows wither value of filtercol is in filterin
   if(filter==TRUE){
-    dff <- df_all %>% filter(.data[[filtercol]] %in% filterin)
+    df <- df_all %>% filter(.data[[filtercol]] %in% filterin)
   }else{
-    dff <- df_all
+    df <- df_all
   }
   # relevel site
   df[,sitecol] <- relevel(as.factor(df[,sitecol]), ref=refsite)
@@ -2080,16 +2104,52 @@ get_parcel_bhv_lm <- function(list,
   stats <- lapply(parc_cols, function(v) lm_parcel_bhv_covars(var=v, df=df, predictors=predictors, statname=statname)) %>% do.call(rbind,.) %>% as.data.frame
   stats$indexcol <- parc_cols
   stats$INDEX <- gsub(prefix,"",stats$indexcol)
+  stats[,paste0(statname,"_FDR_q")] <- p.adjust(stats[,paste0(statname,"_p")], method="fdr")
+  stats[,paste0(statname,"_FDR_sig")] <- stats[,paste0(statname,"_FDR_q")] < alpha
   out <- merge(x=roi_key, y=stats, by="INDEX", all.x=TRUE, all.y=TRUE)
   return(out)
 }
 
-rsfa_22q_iq <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+# get IQ relationships within a given group
+# BSV
+rsfa_22q_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("RSFA 22q significant IQ effects:",sum(rsfa_22q_iq$IQ_full_FDR_sig)))
 
+rsfa_ctrl22q_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CONTROL")
+print(paste("RSFA Control-22q significant IQ effects:",sum(rsfa_ctrl22q_iq$IQ_full_FDR_sig)))
 
+rsfa_chr_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_napls_all), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
+print(paste("RSFA CHR significant IQ effects:",sum(rsfa_chr_iq$IQ_full_FDR_sig)))
+
+rsfa_ctrlchr_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_napls_all), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CONTROL-N")
+print(paste("RSFA Control-CHR significant IQ effects:",sum(rsfa_ctrlchr_iq$IQ_full_FDR_sig)))
+
+# LC
+netho_22q_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+
+netho_ctrl22q_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CONTROL")
+print(paste("NetHo 22q significant IQ effects:",sum(netho_ctrl22q_iq$IQ_full_FDR_sig)))
+
+netho_chr_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_all), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
+print(paste("NetHo CHR significant IQ effects:",sum(netho_chr_iq$IQ_full_FDR_sig)))
+
+netho_ctrlchr_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_all), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CONTROL-N")
+print(paste("NetHo Control-CHR significant IQ effects:",sum(netho_ctrlchr_iq$IQ_full_FDR_sig)))
+
+# GBC
+gbc_22q_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=gbc_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("GBC 22q significant IQ effects:",sum(gbc_22q_iq$IQ_full_FDR_sig)))
+
+gbc_ctrl22q_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=gbc_wide, demo=demo_multisite_bl), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CONTROL")
+print(paste("GBC Control-22q significant IQ effects:",sum(gbc_ctrl22q_iq$IQ_full_FDR_sig)))
+
+gbc_chr_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=gbc_wide, demo=demo_napls_all), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
+print(paste("GBC CHR significant IQ effects:",sum(gbc_chr_iq$IQ_full_FDR_sig)))
+
+gbc_ctrlchr_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=gbc_wide, demo=demo_napls_all), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CONTROL-N")
+print(paste("GBC Control-CHR significant IQ effects:",sum(gbc_ctrlchr_iq$IQ_full_FDR_sig)))
 
 ```
-
 
 
 
