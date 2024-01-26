@@ -60,6 +60,9 @@ if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
 rgl::setupKnitr()
 rgl::rgl.open(); rgl::rgl.close()
 
+# set to TRUE to save outputs, otherwise won't save
+save_outputs=TRUE
+
 # load Rdata instead of loading individual files
 # load(file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"))
 # load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
@@ -281,8 +284,10 @@ demo_table_out <- demo_table_all %>% gt(rownames_to_stub=TRUE) %>%
   tab_style(style = cell_text(weight = "bold"),locations = list(cells_stub(), cells_column_labels())) %>%
   cols_align(align="right", columns=everything())
 
-# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
-# gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.docx"))
+if(save_outputs==TRUE){
+  gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
+  gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.docx"))
+}
 ```
 
 load fMRI data
@@ -432,7 +437,9 @@ sessionInfo()
 sink()
 
 # save image
-# save.image(file=file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"),compress = "bzip2")
+if(save_outputs==TRUE){
+  save.image(file=file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"),compress = "bzip2")
+}
 ```
 
 reload NAPLS data and save
@@ -536,8 +543,6 @@ run_neurocombat <- function(input,
   out <- merge(x=input, y=combat_l, by=c("INDEX", "MRI_S_ID"), all.x=TRUE, all.y=TRUE)
   return(out)
 }
-
-# TODO: address outliers before comBat?
 
 # use only cortical regions
 rsfa_ctx <- filter(rsfa_all, INDEX %in% 1:360)
@@ -679,10 +684,7 @@ norm_plot_gbc
 combat_plot_rsfa
 combat_plot_netho
 combat_plot_gbc
-
-
 ```
-
 convert normed combat results back to wide df merged with demographics
 ```{r}
 # function to convert long to wide df with indices (renamed to r_index) as columns
@@ -709,9 +711,7 @@ rows_to_cols <- function(results, demo, index_colname="INDEX"){
 rsfa_wide <- rows_to_cols(results=rsfa_norm, demo=demo_22q_napls)
 netho_wide <- rows_to_cols(results=netho_norm, demo=demo_22q_napls)
 gbc_wide <- rows_to_cols(results=gbc_norm, demo=demo_22q_napls)
-
 ```
-
 
 test linear models for 22q vs TD and CHR vs TD separately
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -841,13 +841,12 @@ print(paste("NetHo CHRc vs CHR significant regions:",sum(netho_chrcchr_lms$group
 gbc_chrcchr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("GBC CHRc vs CHR significant regions:",sum(gbc_chrcchr_lms$group_FDR_sig)))
 ```
-
-
-
 save workspace with full data
 ```{r paged.print=FALSE}
 # save image
-# save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
+if(save_outputs==TRUE){
+  save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
+}
 ```
 
 
@@ -929,147 +928,176 @@ pal_yellow_orange_red <- function(){
 pl_rsfa_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_rsfa_22q_b_fdr, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_rsfa_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_rsfa_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # 22q NetHo
 pl_netho_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_netho_22q_b_fdr, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_netho_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_netho_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # 22q GBC
 pl_gbc_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_gbc_22q_b_fdr, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_gbc_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_gbc_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # plot group difference beta 
 # 22q RSFA
 pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # 22q NetHo
 pl_netho_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_netho_22q_b, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # 22q GBC
 pl_gbc_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_gbc_22q_b, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_gbc_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
-
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_gbc_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 # plot CHR netho FDR beta
 # chr NetHo
 pl_netho_chr_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_netho_chr_b_fdr, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_netho_chr_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_netho_chr_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # plot CHR threshold free beta
 # chr RSFA
 pl_rsfa_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_chr_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_rsfa_chr_b, title="Signal Variablity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_rsfa_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_rsfa_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # chr NetHo
 pl_netho_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_netho_chr_b, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_netho_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_netho_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 
 # chr GBC
 pl_gbc_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_chr_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_gbc_chr_b, title="Global Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-# view_xifti_surface(pl_gbc_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
-
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_gbc_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+}
 ```
 
 write files for brainsmash null model generation
 needs separate txt files per hemisphere with values ordered by ascending parcel ID
 ```{r}
+# set to TRUE to save brainsmash outputs
+save_bsmash_outputs==FALSE
+
 # RSFA Left cortex
 rsfa_22q_lms_L <- filter(rsfa_22q_lms, INDEX <= 180)
 rsfa_22q_lms_L_b <- rsfa_22q_lms_L[order(rsfa_22q_lms_L$INDEX),"beta"]
-#write.table(rsfa_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(rsfa_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # RSFA Right cortex
 rsfa_22q_lms_R <- filter(rsfa_22q_lms, INDEX > 180 & INDEX <= 360)
 rsfa_22q_lms_R_b <- rsfa_22q_lms_R[order(rsfa_22q_lms_R$INDEX),"beta"]
-#write.table(rsfa_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
-
-# RSFA subcortex
-#rsfa_22q_lms_SC <- filter(rsfa_22q_lms, INDEX > 360)
-#rsfa_22q_lms_SC_b <- rsfa_22q_lms_SC[order(rsfa_22q_lms_SC$INDEX),"beta"]
-#write.table(rsfa_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(rsfa_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # NetHo Left cortex
 netho_22q_lms_L <- filter(netho_22q_lms, INDEX <= 180)
 netho_22q_lms_L_b <- netho_22q_lms_L[order(netho_22q_lms_L$INDEX),"beta"]
-#write.table(netho_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(netho_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # NetHo Right cortex
 netho_22q_lms_R <- filter(netho_22q_lms, INDEX > 180 & INDEX <= 360)
 netho_22q_lms_R_b <- netho_22q_lms_R[order(netho_22q_lms_R$INDEX),"beta"]
-#write.table(netho_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
-
-# NetHo subcortex
-#netho_22q_lms_SC <- filter(netho_22q_lms, INDEX > 360)
-#netho_22q_lms_SC_b <- netho_22q_lms_SC[order(netho_22q_lms_SC$INDEX),"beta"]
-#write.table(netho_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(netho_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # gbc Left cortex
 gbc_22q_lms_L <- filter(gbc_22q_lms, INDEX <= 180)
 gbc_22q_lms_L_b <- gbc_22q_lms_L[order(gbc_22q_lms_L$INDEX),"beta"]
-#write.table(gbc_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(gbc_22q_lms_L_b, file=file.path(project,"CAB-NP/22q_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # gbc Right cortex
 gbc_22q_lms_R <- filter(gbc_22q_lms, INDEX > 180 & INDEX <= 360)
 gbc_22q_lms_R_b <- gbc_22q_lms_R[order(gbc_22q_lms_R$INDEX),"beta"]
-#write.table(gbc_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
-
-# gbc subcortex
-#gbc_22q_lms_SC <- filter(gbc_22q_lms, INDEX > 360)
-#gbc_22q_lms_SC_b <- gbc_22q_lms_SC[order(gbc_22q_lms_SC$INDEX),"beta"]
-#write.table(gbc_22q_lms_SC_b, file=file.path(project,"CAB-NP/22q_TD_GBC_SC.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(gbc_22q_lms_R_b, file=file.path(project,"CAB-NP/22q_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 #####
 
 # RSFA Left cortex CHR
 rsfa_chr_lms_L <- filter(rsfa_chr_lms, INDEX <= 180)
 rsfa_chr_lms_L_b <- rsfa_chr_lms_L[order(rsfa_chr_lms_L$INDEX),"beta"]
-#write.table(rsfa_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(rsfa_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # RSFA Right cortex CHR
 rsfa_chr_lms_R <- filter(rsfa_chr_lms, INDEX > 180 & INDEX <= 360)
 rsfa_chr_lms_R_b <- rsfa_chr_lms_R[order(rsfa_chr_lms_R$INDEX),"beta"]
-#write.table(rsfa_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(rsfa_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_RSFA_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # NetHo Left cortex CHR
 netho_chr_lms_L <- filter(netho_chr_lms, INDEX <= 180)
 netho_chr_lms_L_b <- netho_chr_lms_L[order(netho_chr_lms_L$INDEX),"beta"]
-#write.table(netho_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(netho_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # NetHo Right cortex CHR
 netho_chr_lms_R <- filter(netho_chr_lms, INDEX > 180 & INDEX <= 360)
 netho_chr_lms_R_b <- netho_chr_lms_R[order(netho_chr_lms_R$INDEX),"beta"]
-#write.table(netho_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(netho_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_NetHo_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # gbc Left cortex CHR
 gbc_chr_lms_L <- filter(gbc_chr_lms, INDEX <= 180)
 gbc_chr_lms_L_b <- gbc_chr_lms_L[order(gbc_chr_lms_L$INDEX),"beta"]
-#write.table(gbc_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+if(save_bsmash_outputs==TRUE){
+  write.table(gbc_chr_lms_L_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 # gbc Right cortex CHR
 gbc_chr_lms_R <- filter(gbc_chr_lms, INDEX > 180 & INDEX <= 360)
 gbc_chr_lms_R_b <- gbc_chr_lms_R[order(gbc_chr_lms_R$INDEX),"beta"]
-#write.table(gbc_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
-
+if(save_bsmash_outputs==TRUE){
+  write.table(gbc_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 ```
 
@@ -1170,19 +1198,6 @@ plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided",ylab="",tit
 ```
 
 ```{r}
-# netho_rsfa_22q_cor_L <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L, method="pearson")
-# netho_rsfa_22q_cor_R <- perm_cor_brain_map(map1=netho_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_R, method="pearson")
-# 
-# rsfa_netho_22q_cor_L <- perm_cor_brain_map(map1=rsfa_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_L, method="pearson")
-# rsfa_netho_22q_cor_R <- perm_cor_brain_map(map1=rsfa_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_R, method="pearson")
-# 
-# gbc_rsfa_22q_cor_L <- perm_cor_brain_map(map1=gbc_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_L, method="pearson")
-# gbc_rsfa_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=rsfa_22q_lms, bsmash2=rsfa_22q_bsmash_R, method="pearson")
-# 
-# gbc_netho_22q_cor_L <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_L, method="pearson")
-# gbc_netho_22q_cor_R <- perm_cor_brain_map(map1=gbc_22q_lms, map2=netho_22q_lms, bsmash2=netho_22q_bsmash_R, method="pearson")
-
-
 # make data frame to record correlations between pairs of maps  
 #map_cor <- data.frame(map1=c("22q_lc", "22q_bsv", "chr_gbc", "chr_lc", "chr_bsv", "22q_bsv", "chr_gbc", "chr_lc", "chr_bsv", "chr_gbc", "chr_lc", "chr_bsv", "chr_lc", "chr_bsv", "chr_bsv"), map2=c("22q_gbc", "22q_gbc", "22q_gbc", "22q_gbc", "22q_gbc", "22q_lc", "22q_lc", "22q_lc", "22q_lc", "22q_bsv", "22q_bsv", "22q_bsv", "chr_gbc", "chr_gbc", "chr_lc"))  
 
@@ -1299,7 +1314,6 @@ for(i in 1: nrow(maps_all_df)){
   cor_stats[[i]] <- cor
 }
 
-
 # get p-values
 for(i in 1: nrow(maps_all_df)){
   maps_all_df[i,"p"] <- perm_p(test_stat = cor_stats[[i]]$true_correlation, nulls=cor_stats[[i]]$nulls, alternative = "two.sided")
@@ -1365,7 +1379,9 @@ hmap_cor <- ggplot(maps_replace, aes(x=Var1,y=Var2))+
          shape = guide_legend(order=1, title="p < 0.05",frame.colour = "black", frame.linewidth = 20))
 plot(hmap_cor)
 
-#ggsave(plot=hmap_cor, filename = file.path(project,"figures/fmri_maps/correlation_heatmap.pdf"), device="pdf", width=7.5, height=5.5)
+if(save_outputs==TRUE){
+  ggsave(plot=hmap_cor, filename = file.path(project,"figures/fmri_maps/correlation_heatmap.pdf"), device="pdf", width=7.5, height=5.5)
+}
 
 # plot distributions for two significant pairs
 cor_nulls1 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$nulls, xlab="Pearson's r", title="22qDel LC vs. 22qDel BSV")
@@ -1375,7 +1391,9 @@ cor_nulls2 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q
 cor_nulls_all <- cor_nulls1+cor_nulls2+ 
   plot_annotation(title = 'Null distributions for significant comparisons',theme=theme(plot.title=element_text(size=16,hjust=0.5)))
 cor_nulls_all
-#ggsave(plot=cor_nulls_all, filename = file.path(project,"figures/fmri_maps/correlations_null_dist.pdf"), device="pdf", width=7, height=4)
+if(save_outputs==TRUE){
+  ggsave(plot=cor_nulls_all, filename = file.path(project,"figures/fmri_maps/correlations_null_dist.pdf"), device="pdf", width=7, height=4)
+}
 
 # plot_cor_nulls(test_stat=netho_rsfa_22q_cor_R$true_correlation, nulls=netho_rsfa_22q_cor_R$nulls, xlab="Pearson r", title="NetHo vs RSFA, RH")
 # #plot_cor_nulls(rsfa_netho_22q_cor_L, title="RSFA vs NetHo, LH, n=10,000")
@@ -1494,8 +1512,6 @@ gbc_nulls <- read.csv(file.path(project,"gbc_ahba_pls_permuted_yr2.csv"))
 # plot distributions
 plot_cor_nulls(test_stat = rsfa_y_r2[1], nulls=as.numeric(rsfa_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="RSFA vs AHBA")
 plot_cor_nulls(test_stat = gbc_y_r2[1], nulls=as.numeric(gbc_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="GBC vs AHBA")
-
-
 ```
 
 ```{r}
@@ -1536,7 +1552,6 @@ univariate AHBA correlations
 # # write.table(rsfa_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_RSFA_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
 # # write.table(netho_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_NetHo_AHBA.csv"), quote=FALSE,  row.names = FALSE, sep=",")
 # # write.table(gbc_ahba_cor, file=file.path(project,"CAB-NP/22q_TD_GBC_AHBA.csv"), quote=FALSE, row.names = FALSE, sep=",")
-
 ```
 
 ```{r}
@@ -1566,7 +1581,6 @@ univariate AHBA correlations
 # # get top 90th percentile of absolute value correlations for RSFA
 # rsfa_ahba_abs90 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.90, alternative="two.sided")
 # rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative="two.sided")
-
 ```
 
 brainsmash top quantile of univariate tested genes
@@ -1659,7 +1673,6 @@ rsfa_chr_nmap_cor <- nmap_cor(map1=rsfa_chr_nmap$beta, map_all=rsfa_chr_nmap, me
 netho_chr_nmap_cor <- nmap_cor(map1=netho_chr_nmap$beta, map_all=netho_chr_nmap, method="pearson", use="complete.obs")
 gbc_chr_nmap_cor <- nmap_cor(map1=gbc_chr_nmap$beta, map_all=gbc_chr_nmap, method="pearson", use="complete.obs")
 
-
 # plot
 # pl_cmruglu <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_nmap, roi_col="INDEX", val_col="cmruglu")
 # view_xifti_surface(pl_cmruglu, title="Glucose Metabolism", cex.title=1.3, colors="magma",hemisphere="left")
@@ -1715,7 +1728,6 @@ rsfa_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_chr_nmap_cor, neuromap
 netho_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=netho_chr_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=netho_chr_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
 
 gbc_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=gbc_chr_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_chr_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
-
 ```
 
 plot neuromaps results
@@ -1730,7 +1742,7 @@ netho_22q_nuls_long$variable <- factor(netho_22q_nuls_long$variable,levels=nmap_
 gbc_22q_nuls_long <- melt.data.table(as.data.table(gbc_22q_nmap_p$nulls), id.vars="perm")
 gbc_22q_nuls_long$variable <- factor(gbc_22q_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
 
-  
+# plot
 gbc_box <- ggplot(data=gbc_22q_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
   geom_point(data=gbc_22q_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
@@ -1758,7 +1770,6 @@ netho_box <- ggplot(data=netho_22q_nuls_long, aes(y=value, x=variable))+
   #xlab("Brain Map Comparison")+
   xlab("")+
   ggtitle("Local Connectivity")
-  
 
 rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
@@ -1780,7 +1791,9 @@ rsfa_box <- ggplot(data=rsfa_22q_nuls_long, aes(y=value, x=variable))+
 neuromaps_22q_bplots <- gbc_box/netho_box/rsfa_box+plot_layout(guides = "collect")
 neuromaps_22q_bplots
 
-#ggsave(neuromaps_22q_bplots, file=file.path(project,"figures/neuromaps/neuromaps_22q_correlations.pdf"), device = "pdf", height = 8, width = 9)
+if(save_outputs==TRUE){
+  ggsave(neuromaps_22q_bplots, file=file.path(project,"figures/neuromaps/neuromaps_22q_correlations.pdf"), device = "pdf", height = 8, width = 9)
+}
 ```
 plot chr neuromaps
 ```{r}
@@ -1794,7 +1807,7 @@ netho_chr_nuls_long$variable <- factor(netho_chr_nuls_long$variable,levels=nmap_
 gbc_chr_nuls_long <- melt.data.table(as.data.table(gbc_chr_nmap_p$nulls), id.vars="perm")
 gbc_chr_nuls_long$variable <- factor(gbc_chr_nuls_long$variable,levels=nmap_match$variable,ordered=TRUE)
 
-  
+# plot
 chr_gbc_box <- ggplot(data=gbc_chr_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
   geom_point(data=gbc_chr_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
@@ -1824,7 +1837,6 @@ chr_netho_box <- ggplot(data=netho_chr_nuls_long, aes(y=value, x=variable))+
   ggtitle("Local Connectivity")+
   theme(legend.position="none")
   
-
 chr_rsfa_box <- ggplot(data=rsfa_chr_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
   #geom_half_violin(fill="grey50", side="r", ="lightgrey", side="r", lty="blank")+
@@ -1845,7 +1857,9 @@ chr_rsfa_box <- ggplot(data=rsfa_chr_nuls_long, aes(y=value, x=variable))+
 neuromaps_chr_bplots <- chr_gbc_box/chr_netho_box/chr_rsfa_box+plot_layout(guides = "collect")
 neuromaps_chr_bplots
 
-#ggsave(neuromaps_chr_bplots, file=file.path(project,"figures/neuromaps/neuromaps_chr_correlations.pdf"), device = "pdf", height = 8, width = 9)
+if(save_outputs==TRUE){
+  ggsave(neuromaps_chr_bplots, file=file.path(project,"figures/neuromaps/neuromaps_chr_correlations.pdf"), device = "pdf", height = 8, width = 9)
+}
 ```
 
 plot chosen neuromaps
@@ -1854,56 +1868,76 @@ plot chosen neuromaps
 pl_glucose <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="cmruglu")
 view_xifti_surface(pl_glucose, title="Glucose metabolism",hemisphere = "left", cex.title=3,zlim=c(3300,7300), colors="plasma")
 #save
-view_xifti_surface(pl_glucose, title="Glucose metabolism",hemisphere = "left", cex.title=3,zlim=c(3300,7300), colors="plasma", fname=file.path(project,"figures/neuromaps/glucose.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_glucose, title="Glucose metabolism",hemisphere = "left", cex.title=3,zlim=c(3300,7300), colors="plasma", fname=file.path(project,"figures/neuromaps/glucose.png"),legend_embed=TRUE)
+}
 
 # oxygen
 pl_oxygen <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="cmr02")
 view_xifti_surface(pl_oxygen, title="Oxygen metabolism",hemisphere = "left", cex.title=3,zlim=c(2200,6000), colors="plasma")
 #save
-view_xifti_surface(pl_oxygen, title="Oxygen metabolism",hemisphere = "left", cex.title=3,zlim=c(2200,6000), colors="plasma", fname=file.path(project,"figures/neuromaps/oxygen.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_oxygen, title="Oxygen metabolism",hemisphere = "left", cex.title=3,zlim=c(2200,6000), colors="plasma", fname=file.path(project,"figures/neuromaps/oxygen.png"),legend_embed=TRUE)
+}
 
 # CBF
 pl_cbf <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="CBF")
 view_xifti_surface(pl_cbf, title="Blood flow",hemisphere = "left", cex.title=3,zlim=c(10,70), colors="rocket")
 #save
-view_xifti_surface(pl_cbf, title="Blood flow",hemisphere = "left", cex.title=3,zlim=c(10,70), colors="rocket", fname=file.path(project,"figures/neuromaps/CBF.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_cbf, title="Blood flow",hemisphere = "left", cex.title=3,zlim=c(10,70), colors="rocket", fname=file.path(project,"figures/neuromaps/CBF.png"),legend_embed=TRUE)
+}
 
 # CBV
 pl_cbv <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="cbv")
 view_xifti_surface(pl_cbv, title="Blood volume",hemisphere = "left", cex.title=3,zlim=c(3000,7000), colors="rocket")
 #save
-view_xifti_surface(pl_cbv, title="Blood volume",hemisphere = "left", cex.title=3,zlim=c(3000,7000), colors="rocket", fname=file.path(project,"figures/neuromaps/CBV.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_cbv, title="Blood volume",hemisphere = "left", cex.title=3,zlim=c(3000,7000), colors="rocket", fname=file.path(project,"figures/neuromaps/CBV.png"),legend_embed=TRUE)
+}
 
 # G1 FMRI
 pl_g1fmri <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="G1.fMRI")
 view_xifti_surface(pl_g1fmri, title="fMRI gradient",hemisphere = "left", cex.title=3,zlim=c(-6.5,6.5), colors="viridis")
 #save
-view_xifti_surface(pl_g1fmri, title="fMRI gradient",hemisphere = "left", cex.title=3,zlim=c(-6.5,6.5), colors="viridis", fname=file.path(project,"figures/neuromaps/G1fMRI.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_g1fmri, title="fMRI gradient",hemisphere = "left", cex.title=3,zlim=c(-6.5,6.5), colors="viridis", fname=file.path(project,"figures/neuromaps/G1fMRI.png"),legend_embed=TRUE)
+}
 
 # intersubject
 pl_inter <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="intersubjvar")
 view_xifti_surface(pl_inter, title="Individual variation",hemisphere = "left", cex.title=3,zlim=c(0.4,0.7), colors="viridis")
 #save
-view_xifti_surface(pl_inter, title="Individual variation",hemisphere = "left", cex.title=3,zlim=c(0.4,0.7), colors="viridis", fname=file.path(project,"figures/neuromaps/intersubj.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_inter, title="Individual variation",hemisphere = "left", cex.title=3,zlim=c(0.4,0.7), colors="viridis", fname=file.path(project,"figures/neuromaps/intersubj.png"),legend_embed=TRUE)
+}
 
 # PVALB-SST
 pl_pv <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="PVALB_SST")
 view_xifti_surface(pl_pv, title="PVALB-SST gradient",hemisphere = "left", cex.title=3,zlim=c(-0.6,0.6), colors="viridis")
 #save
-view_xifti_surface(pl_pv, title="PVALB-SST gradient",hemisphere = "left", cex.title=3,zlim=c(-0.6,0.6), colors="viridis", fname=file.path(project,"figures/neuromaps/pvalb_sst.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_pv, title="PVALB-SST gradient",hemisphere = "left", cex.title=3,zlim=c(-0.6,0.6), colors="viridis", fname=file.path(project,"figures/neuromaps/pvalb_sst.png"),legend_embed=TRUE)
+}
 
 # Size
 pl_size <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=as.data.frame(neuromaps_ordered), roi_col="INDEX", val_col="ROI_size")
 view_xifti_surface(pl_size, title="ROI size",hemisphere = "left", cex.title=3,zlim=c(35,840), colors="mako")
 #save
-view_xifti_surface(pl_size, title="ROI size",hemisphere = "left", cex.title=3,zlim=c(-0.6,0.6), colors="mako", fname=file.path(project,"figures/neuromaps/pvalb_size.png"),legend_embed=TRUE)
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_size, title="ROI size",hemisphere = "left", cex.title=3,zlim=c(-0.6,0.6), colors="mako", fname=file.path(project,"figures/neuromaps/pvalb_size.png"),legend_embed=TRUE)
+}
 
 # plot group difference beta 
 # 22q RSFA
-view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.title=3, hemisphere="left",  fname=file.path(project,"figures/neuromaps//rsfa_22q_b_l.png"),legend_embed=TRUE,title="22qDel BSV")
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.title=3, hemisphere="left",  fname=file.path(project,"figures/neuromaps//rsfa_22q_b_l.png"),legend_embed=TRUE,title="22qDel BSV")
+}
 
 # 22q NetHo
-view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.title=3, hemisphere="left", fname=file.path(project,"figures/neuromaps//netho_22q_b_l.png"),legend_embed=TRUE, title="22qDel LC")
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(),cex.title=3, hemisphere="left", fname=file.path(project,"figures/neuromaps//netho_22q_b_l.png"),legend_embed=TRUE, title="22qDel LC")
+}
 ```
 
 neuromaps info table 
@@ -1951,10 +1985,10 @@ nmap_table_out <- nmap_table %>% gt() %>%
 #f <- chromote::default_chromote_object()
 #f$close()
 
-gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.png"))
-gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.tex"))
-gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.pdf"))
-gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.rtf"))
+if(save_outputs==TRUE){
+  gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.png"))
+  gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.docx"))
+}
 ```
 
 
