@@ -822,15 +822,25 @@ print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$group_FDR_sig)))
 
 test CHRc vs TD
 ```{r}
+# test CHRc vs CONTROL-N
 rsfa_chrc_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA CHRc significant regions:",sum(rsfa_chrc_lms$group_FDR_sig)))
+print(paste("RSFA CHRc vs Control significant regions:",sum(rsfa_chrc_lms$group_FDR_sig)))
 
 netho_chrc_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo CHRc significant regions:",sum(netho_chrc_lms$group_FDR_sig)))
+print(paste("NetHo CHRc vs Control significant regions:",sum(netho_chrc_lms$group_FDR_sig)))
 
 gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("GBC CHRc significant regions:",sum(gbc_chrc_lms$group_FDR_sig)))
+print(paste("GBC CHRc vs Control significant regions:",sum(gbc_chrc_lms$group_FDR_sig)))
 
+# test CHRc vs CHR
+rsfa_chrcchr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("RSFA CHRc vs CHR significant regions:",sum(rsfa_chrcchr_lms$group_FDR_sig)))
+
+netho_chrcchr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("NetHo CHRc vs CHR significant regions:",sum(netho_chrcchr_lms$group_FDR_sig)))
+
+gbc_chrcchr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+print(paste("GBC CHRc vs CHR significant regions:",sum(gbc_chrcchr_lms$group_FDR_sig)))
 ```
 
 
@@ -917,67 +927,67 @@ pal_yellow_orange_red <- function(){
 ```{r}
 # plot group difference beta only fdr<0.05
 # 22q RSFA
-pl_rsfa_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta_FDR")
+pl_rsfa_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_rsfa_22q_b_fdr, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_rsfa_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_rsfa_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q NetHo
-pl_netho_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="beta_FDR")
+pl_netho_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_netho_22q_b_fdr, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_netho_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_netho_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q GBC
-pl_gbc_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta_FDR")
+pl_gbc_22q_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_gbc_22q_b_fdr, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_gbc_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_gbc_22q_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # plot group difference beta 
 # 22q RSFA
-pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
+pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_rsfa_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q NetHo
-pl_netho_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="beta")
+pl_netho_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_22q_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_netho_22q_b, title="Local Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_netho_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # 22q GBC
-pl_gbc_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="beta")
+pl_gbc_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_gbc_22q_b, title="Global Connectivity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_gbc_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_gbc_22q_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22q_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # plot CHR netho FDR beta
 # chr NetHo
-pl_netho_chr_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="beta_FDR")
+pl_netho_chr_b_fdr <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="group_beta_FDR")
 view_xifti_surface(pl_netho_chr_b_fdr, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_netho_chr_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_netho_chr_b_fdr,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b_fdr.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # plot CHR threshold free beta
 # chr RSFA
-pl_rsfa_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_chr_lms, roi_col="INDEX", val_col="beta")
+pl_rsfa_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_chr_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_rsfa_chr_b, title="Signal Variablity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_rsfa_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_rsfa_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/rsfa_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # chr NetHo
-pl_netho_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="beta")
+pl_netho_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=netho_chr_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_netho_chr_b, title="Local Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_netho_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_netho_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/netho_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 # chr GBC
-pl_gbc_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_chr_lms, roi_col="INDEX", val_col="beta")
+pl_gbc_chr_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_chr_lms, roi_col="INDEX", val_col="group_beta")
 view_xifti_surface(pl_gbc_chr_b, title="Global Connectivity: CHR vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # save
-view_xifti_surface(pl_gbc_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
+# view_xifti_surface(pl_gbc_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 
 ```
 
@@ -1378,7 +1388,6 @@ cor_nulls_all
 # 
 
 ```
-
 
 read AHBA data
 ```{r}
@@ -1950,10 +1959,6 @@ gtsave(nmap_table_out, filename = file.path(project,"figures/neuromaps/table2.rt
 ```
 
 
-
-
-
-
 ## Supplemental analyses
 collect main effect of site from models
 ```{r paged.print=FALSE}
@@ -1976,7 +1981,6 @@ site_p_all <- lapply(list(rsfa_22q_lms, rsfa_chr_lms, netho_22q_lms, netho_chr_l
 
 # get smallest p-value for each measure
 site_p_mins <- lapply(site_p_all, function(s) min(s$all_p))
-
 ```
 
 within 22qDel and CHR groups, LM comparing with/without antipsychotic meds
@@ -2018,7 +2022,6 @@ within 22qDel group, LM comparing with/without congenital cardiac Dx
 rsfa_22q_heart <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
 
 
-
 ```
 
 psychosis dx relationships in 22q
@@ -2034,48 +2037,35 @@ gbc_22q_psych <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo
 print(paste("GBC 22q significant psychosis effects:",sum(gbc_22q_psych$group_FDR_sig)))
 
 ```
-investigate psychosis GBC effect in 22q further
+investigate psychosis GBC effect in 22q further (only 16 people with psychosis though)
 ```{r}
-test <- lm_parcel_group_covars(df=filter(add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="psych_dx")$df, Group=="22qDel"), var="r_65",predictors="psych_dx + AGE + AGE2 + SEX + Site + percent_udvarsme", groupcol="psych_dx", groups=c("Y","N"), refgroup="N", test_out_model=TRUE) 
+# get significant regions
+psych_22q_gbc_sig <- filter(gbc_22q_psych, group_FDR_sig==TRUE)
 
+# get actual models for each to confirm everything looks good
+psych_22q_gbc_mods <-lapply(psych_22q_gbc_sig$indexcol, function(i) summary(lm_parcel_group_covars(df=filter(add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="psych_dx")$df, Group=="22qDel"), var=i,predictors="psych_dx + AGE + AGE2 + SEX + Site + percent_udvarsme", groupcol="psych_dx", groups=c("Y","N"), refgroup="N", test_out_model=TRUE)))
+
+# plot
+pl_gbc_22q_psych <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_psych, roi_col="INDEX", val_col="group_beta_FDR")
+view_xifti_surface(pl_gbc_22q_psych, title="Global Connectivity: 22qDel PS+ vs PS- (FDR q<0.05)", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 ```
 
 lm of IQ in each group
 ```{r}
-# function to return beta coefficient for group in a lm predicting MRI from chosen predictors
+# function to return beta coefficient for a continuous predictor (edit of lm_parcel_group_covars)   
 lm_parcel_bhv_covars <- function(df, var, predictors, statname="IQ_full"){
   # create formula with var on left side and predictors string on right
   form <- reformulate(predictors,response=var)
   # test linear model
   lm <- lm(formula=form,data=df, na.action="na.omit")
   slm <- summary(lm)
-  # # get stats for main effect of group
-  # g <- groups[which(groups != refgroup)]
-  # gname <- paste0(groupcol,g)
-  # g_stats <- slm$coefficients[gname,] %>% t %>% as.data.frame
-  # colnames(g_stats) <- c("group_beta","group_se","group_t","group_p")
-  # # get stats for site effects
-  # srows <- grep("Site*", rownames(slm$coefficients))
-  # s_stats <- slm$coefficients[srows,]
-  # colnames(s_stats) <- c("beta","se","t","p")
-  # # convert rows to columns
-  # s_out <- data.frame()
-  # for(r in 1:nrow(s_stats)){
-  #   rname <- rownames(s_stats)[r]
-  #   cnames <- paste0(rname,"_",colnames(s_stats))
-  #   s_out[1,cnames] <- s_stats[r,] 
-  # }
-  # # add outputs together
   out <- slm$coefficients[statname,] %>% t %>% as.data.frame
   colnames(out) <- paste0(statname,c("_beta","_se","_t","_p"))
   return(out)
 }
 #test <- lm_parcel_bhv_covars(df=filter(add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl)$df, Group %in% c("22qDel")), var="r_1",predictors="IQ_full + SEX + Site + percent_udvarsme") 
 
-
 # function to apply lm at each parcel, expects list object output from rows_to_cols
-# defaults, including formula predictors, are set in function but different values can be specified
-# groups should be a vector specifying which groups should be ussed
 get_parcel_bhv_lm <- function(list,
                                 sitecol="Site",
                                 refsite,
@@ -2151,7 +2141,12 @@ print(paste("GBC Control-CHR significant IQ effects:",sum(gbc_ctrlchr_iq$IQ_full
 
 ```
 
+lm of SIPS positive for regions with significant CHR effect on LC
+```{r}
+# add a sips positive column for demo_napls_all
+sips # TODO read sips
+demo_napls_sips <- merge(x=demo_napls_all, y=sips, by="MRI_S_ID")
 
+netho_chr_sipsp <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_sips), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
 
-
-
+```
