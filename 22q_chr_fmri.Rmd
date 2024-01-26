@@ -53,7 +53,6 @@ print(paste("Project directory:", project))
 wbpath <- "/Applications/workbench/bin_macosx64/"
 ciftiTools.setOption("wb_path", wbpath)
 
-
 # load rgl for ciftiTools visualization
 # may require XQartz v2.8.1 to be installed locally
 if(!require('rgl', quietly=TRUE)){install.packages('rgl')}
@@ -65,6 +64,7 @@ save_outputs=TRUE
 
 # load Rdata instead of loading individual files
 # load(file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"))
+# load(file.path(project,"git_exclude/22q_chr_fmri_main.Rdata"))
 # load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
 ```
 
@@ -841,14 +841,13 @@ print(paste("NetHo CHRc vs CHR significant regions:",sum(netho_chrcchr_lms$group
 gbc_chrcchr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("GBC CHRc vs CHR significant regions:",sum(gbc_chrcchr_lms$group_FDR_sig)))
 ```
-save workspace with full data
+save workspace with main data
 ```{r paged.print=FALSE}
 # save image
 if(save_outputs==TRUE){
-  save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
+  save.image(file=file.path(project,"git_exclude/22q_chr_fmri_main.Rdata"),compress = "gzip")
 }
 ```
-
 
 plot group difference maps
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -1011,7 +1010,7 @@ write files for brainsmash null model generation
 needs separate txt files per hemisphere with values ordered by ascending parcel ID
 ```{r}
 # set to TRUE to save brainsmash outputs
-save_bsmash_outputs==FALSE
+save_bsmash_outputs=FALSE
 
 # RSFA Left cortex
 rsfa_22q_lms_L <- filter(rsfa_22q_lms, INDEX <= 180)
@@ -1146,7 +1145,7 @@ compare RSFA and NetHo via permutation
 # function to compute correlation between two brain maps and compare to brainsmash null distribution
 # requires df for brain map1, and df and brainsmash output for map2
 # outputs list object with true correlation and vector for null distribution
-perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), val_col1="beta", val_col2="beta", method){
+perm_cor_brain_map <- function(map1, map2, bsmash2, cols=paste0("V",1:10000), val_col1="group_beta", val_col2="group_beta", method){
   # get list of parcels in brainsmash data (e.g. left hemisphere only)
   indices <- bsmash2[which(!is.na(bsmash2$V1)),"INDEX"]
   # filter input for only those
@@ -1504,14 +1503,14 @@ on hoffman, clone this git repo and run submit_ahba_permute_hoffman.sh to submit
 
 get permuted PLS p-value
 ```{r}
-# read nulls
-rsfa_nulls <- read.csv(file.path(project,"rsfa_ahba_pls_permuted_yr2.csv"))
-netho_nulls <- read.csv(file.path(project,"netho_ahba_pls_permuted_yr2.csv"))
-gbc_nulls <- read.csv(file.path(project,"gbc_ahba_pls_permuted_yr2.csv"))
-
-# plot distributions
-plot_cor_nulls(test_stat = rsfa_y_r2[1], nulls=as.numeric(rsfa_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="RSFA vs AHBA")
-plot_cor_nulls(test_stat = gbc_y_r2[1], nulls=as.numeric(gbc_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="GBC vs AHBA")
+# # read nulls
+# rsfa_nulls <- read.csv(file.path(project,"rsfa_ahba_pls_permuted_yr2.csv"))
+# netho_nulls <- read.csv(file.path(project,"netho_ahba_pls_permuted_yr2.csv"))
+# gbc_nulls <- read.csv(file.path(project,"gbc_ahba_pls_permuted_yr2.csv"))
+# 
+# # plot distributions
+# plot_cor_nulls(test_stat = rsfa_y_r2[1], nulls=as.numeric(rsfa_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="RSFA vs AHBA")
+# plot_cor_nulls(test_stat = gbc_y_r2[1], nulls=as.numeric(gbc_nulls[1,]), alternative = "greater", xlab="Comp 1 Y R2", title="GBC vs AHBA")
 ```
 
 ```{r}
@@ -2190,4 +2189,12 @@ lm of SIPS positive for regions with significant CHR effect on LC
 # 
 # netho_chr_sipsp <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_sips), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
 
+```
+
+save workspace with main data
+```{r paged.print=FALSE}
+# save image
+if(save_outputs==TRUE){
+  save.image(file=file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"),compress = "gzip")
+}
 ```
