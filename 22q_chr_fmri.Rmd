@@ -2017,10 +2017,15 @@ within 22qDel group, LM comparing with/without congenital cardiac Dx
 ```{r}
 
 # get main effects of group for each measure
-# TODO: add cardiac status to rsfa_wide$df, need new group column for +/- congenital heart Dx, filter for only 22qDel
-rsfa_22q_heart <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL",roi_key=filter(ji_key,INDEX %in% 1:360))
+# TODO: add cardiac status for Rome (currently NA), and confirm SUNY
+rsfa_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("RSFA 22q significant cardiac effects:",sum(rsfa_22q_heart$group_FDR_sig)))
 
+netho_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=netho_wide, demo=demo_multisite_bl, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("NetHo 22q significant cardiac effects:",sum(netho_22q_heart$group_FDR_sig)))
 
+gbc_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("GBC 22q significant cardiac effects:",sum(gbc_22q_heart$group_FDR_sig)))
 ```
 
 psychosis dx relationships in 22q
