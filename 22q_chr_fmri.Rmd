@@ -6,7 +6,7 @@ output: html_document
 ---
 
 # setup workspace
-```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r setup, message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to set up environment
 # clear workspace
 rm(list = ls(all.names = TRUE))
@@ -69,7 +69,7 @@ save_outputs=TRUE
 ```
 
 get subject IDs and load demographic data
-```{r}
+```{r loadDemo}
 # load CAB-NP network parcellation
 # https://github.com/ColeLab/ColeAnticevicNetPartition
 ji_key <- read.table(file.path(project,"CAB-NP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_LabelKey.txt"),header=T)
@@ -167,7 +167,7 @@ demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
 ```
 
 add converter label for NAPLS2
-```{r}
+```{r convertLabel}
 converters <- read_xlsx(file.path(project,"demographics/NAPLS/converters.xlsx"))
 convert_ids <- merge(x=converters, y=napls_id_match, by=c("SiteNumber","SubjectNumber"))
 demo_22q_napls$GroupConvert <- as.character(demo_22q_napls$Group)
@@ -176,7 +176,7 @@ demo_22q_napls$GroupConvert %<>% as.factor
 ```
 
 load movement data
-```{r}
+```{r loadMovement}
 ## get movement info
 # function to get mapping between boldn and run name from session_hcp.txt
 get_boldn_names <- function(sesh,sessions_dir){
@@ -231,7 +231,7 @@ demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","
 ```
 
 demo table
-```{r}
+```{r demoTable}
 demo_22q_napls_all <- demo_22q_napls
 
 demo_multisite_bl$Group <- factor(demo_multisite_bl$SUBJECT_IDENTITY,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
@@ -291,7 +291,7 @@ if(save_outputs==TRUE){
 ```
 
 load fMRI data
-```{r}
+```{r loadFMRI}
 # read CSV results
 # function to read parcellated results and add columns for roi pair name, site, and ID 
 read_csv_results <- function(sdir, fname, sesh, site){
@@ -392,7 +392,6 @@ napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_res
 gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
 gbc_all$INDEX %<>% as.numeric
 gbc_all$GBC %<>% as.numeric
-
 ```
 
 Notes on NAPLS QC: 
@@ -1810,7 +1809,7 @@ gbc_chr_nuls_long$variable <- factor(gbc_chr_nuls_long$variable,levels=nmap_matc
 chr_gbc_box <- ggplot(data=gbc_chr_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
   geom_point(data=gbc_chr_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
-  scale_color_manual(values = c("tan","red"))+
+  scale_color_manual(values = c("tan","steelblue"))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
   #theme(axis.text.x = element_text(angle = 45, hjust=1))+
@@ -1825,7 +1824,7 @@ chr_gbc_box <- ggplot(data=gbc_chr_nuls_long, aes(y=value, x=variable))+
 chr_netho_box <- ggplot(data=netho_chr_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
   geom_point(data=netho_chr_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
-  scale_color_manual(values = c("tan","red"))+
+  scale_color_manual(values = c("tan","steelblue"))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
   #theme(axis.text.x = element_text(angle = 45, hjust=1))+
@@ -1839,8 +1838,9 @@ chr_netho_box <- ggplot(data=netho_chr_nuls_long, aes(y=value, x=variable))+
 chr_rsfa_box <- ggplot(data=rsfa_chr_nuls_long, aes(y=value, x=variable))+
   geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
   #geom_half_violin(fill="grey50", side="r", ="lightgrey", side="r", lty="blank")+
-  geom_point(data=rsfa_chr_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
-  scale_color_manual(values = c("tan","red"))+
+  geom_point(data=rsfa_chr_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3,alpha=0.5)+
+  guides(colour = guide_legend(override.aes = list(alpha = 1)))+
+  scale_color_manual(values = c("tan","steelblue"))+
   scale_shape_manual(values=c(18,16))+
   theme_classic(base_size = 15)+
   theme(axis.text.x = element_text(angle = 45, hjust=1))+
@@ -2044,24 +2044,37 @@ print(paste("GBC 22q significant med effects:",sum(gbc_22q_med$group_FDR_sig)))
 gbc_chr_med <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_napls_all), groupcol="Med_Antipsychotic", groups=c("Y","N"), refgroup="N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
 print(paste("GBC CHR significant med effects:",sum(gbc_chr_med$group_FDR_sig)))
 
+# get counts
+print("22qDel med subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="Med_Antipsychotic")$df, Group=="22qDel")$Med_Antipsychotic %>% as.factor %>% summary
+print("CHR med subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_napls_all, democols="Med_Antipsychotic")$df, Group=="CHR")$Med_Antipsychotic %>% as.factor %>% summary
 ```
 
-within 22qDel group, LM comparing with/without congenital cardiac Dx
+within 22qDel group, LM comparing with/without congenital cardiac Dx (currently missing info for Rome, and unsure of coding for SUNY)
 ```{r}
+# exclude rome and SUNY until confirmed
+demo_cardiac <- demo_multisite_bl
+demo_cardiac[which(demo_cardiac$Site %in% c("Rome","SUNY")),"cardiac"] <- NA
 
 # get main effects of group for each measure
 # TODO: add cardiac status for Rome (currently NA), and confirm SUNY
-rsfa_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+rsfa_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_cardiac, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
 print(paste("RSFA 22q significant cardiac effects:",sum(rsfa_22q_heart$group_FDR_sig)))
 
-netho_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=netho_wide, demo=demo_multisite_bl, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+netho_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=netho_wide, demo=demo_cardiac, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
 print(paste("NetHo 22q significant cardiac effects:",sum(netho_22q_heart$group_FDR_sig)))
 
-gbc_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+gbc_22q_heart <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_cardiac, democols="cardiac"), groupcol="cardiac", groups=c("Y","N"),refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
 print(paste("GBC 22q significant cardiac effects:",sum(gbc_22q_heart$group_FDR_sig)))
+
+# get counts
+print("22qDel cardiac subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_cardiac, democols="cardiac")$df, Group=="22qDel")$cardiac %>% summary
+
 ```
 
-psychosis dx relationships in 22q
+psychosis dx relationships in 22q (this is underpowered with only n=16 PS+)
 ```{r}
 # test linear model comparing psychosis dx within patients
 rsfa_22q_psych <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="psych_dx"), groupcol="psych_dx", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
@@ -2073,6 +2086,9 @@ print(paste("NetHo 22q significant psychosis effects:",sum(netho_22q_psych$group
 gbc_22q_psych <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_multisite_bl, democols="psych_dx"), groupcol="psych_dx", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
 print(paste("GBC 22q significant psychosis effects:",sum(gbc_22q_psych$group_FDR_sig)))
 
+# get counts
+print("22qDel PS+/PS- subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="psych_dx")$df, Group=="22qDel")$psych_dx %>% as.factor %>% summary
 ```
 
 investigate psychosis GBC effect in 22q further (only 16 people with psychosis though)
@@ -2180,6 +2196,209 @@ print(paste("GBC CHR significant IQ effects:",sum(gbc_chr_iq$IQ_full_FDR_sig)))
 gbc_ctrlchr_iq <- get_parcel_bhv_lm(list=add_demo_cols(list=gbc_wide, demo=demo_napls_all), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CONTROL-N")
 print(paste("GBC Control-CHR significant IQ effects:",sum(gbc_ctrlchr_iq$IQ_full_FDR_sig)))
 
+# get counts
+print("22qDel IQ subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="IQ_full")$df, Group=="22qDel" & !is.na(IQ_full))$IQ_full %>% length
+print("Control22q IQ subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_multisite_bl, democols="IQ_full")$df, Group=="CONTROL" & !is.na(IQ_full))$IQ_full %>% length
+print("CHR IQ subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_napls_all, democols="IQ_full")$df, Group=="CHR" & !is.na(IQ_full))$IQ_full %>% length
+print("ControlCHR IQ subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_napls_all, democols="IQ_full")$df, Group=="CONTROL-N" & !is.na(IQ_full))$IQ_full %>% length
+```
+get SIPS/PANSS subthreshold PS group in 22qDel
+```{r}
+# read UCLA SIPS
+ucla_sips <- read.csv(file.path(project,"demographics/ucla_sistat/Re22Q_Form_SIPS.csv"), na.strings = c(".","","-9999","-9998"),strip.white =T)
+ucla_demo <- read.csv(file.path(project,"demographics/ucla_sistat/Re22Q_Qry_demo_mri.csv"), na.strings = c(".","","-9999","-9998"),strip.white =T)
+
+# function to get psychosis status from SIPS
+# to be applied to the row indices of a demographics df, and also given the SIPS df
+get_sips <- function(r, demo, sips){
+   mri_id <- demo$MRI_S_ID[[r]]
+   sub <- demo$SUBJECTID[[r]]
+   visit <- demo$CONVERTEDVISITNUM[[r]]
+   df_out <- data.frame(MRI_S_ID=mri_id, SUBJECTID=sub, CONVERTEDVISITNUM=visit)
+   sips_sesh <- sips %>% filter(SUBJECTID == sub & CONVERTEDVISITNUM == visit)
+   if(nrow(sips_sesh) < 1){
+     # if no match for sub+visit in sips table, set outputs to NA
+     df_out[, c("SIPS_p_sum", "SIPS_n_sum", "SIPS_d_sum", "SIPS_g_sum", "SIPS_total", "SIPS_psychosis_6", "SIPS_psspectrum_3")] <- rep(NA, times = 7)
+   }else if(nrow(sips_sesh) > 1){
+     # if more than one match for sub+visit, note error
+     df_out[, c("SIPS_p_sum", "SIPS_n_sum", "SIPS_d_sum", "SIPS_g_sum", "SIPS_total", "SIPS_psychosis_6", "SIPS_psspectrum_3")] <- rep("ERROR-duplicates", times = 7)
+   }else{
+     # get SIPS P scores
+     sips_p_scores <- sips_sesh[c("P1SEV", "P2SEV", "P3SEV", "P4SEV", "P5SEV")]
+     # sum SIPS P
+     df_out[,"SIPS_p_sum"] <- sum(sips_p_scores)
+     # get SIPS N
+     sips_n_scores <- sips_sesh[c("N1SEV", "N2SEV", "N3SEV", "N4SEV", "N5SEV", "N6SEV")]
+     df_out[,"SIPS_n_sum"] <- sum(sips_n_scores)
+     # get SIPS D
+     sips_d_scores <- sips_sesh[c("D1SEV", "D2SEV", "D3SEV", "D4SEV")]
+     df_out[,"SIPS_d_sum"] <- sum(sips_d_scores)
+     # get SIPS G
+     sips_g_scores <- sips_sesh[c("G1SEV", "G2SEV", "G3SEV", "G4SEV")]
+     df_out[,"SIPS_g_sum"] <- sum(sips_g_scores)
+     # get SIPS total
+     df_out["SIPS_total"] <- (df_out["SIPS_p_sum"] +  df_out["SIPS_n_sum"] +  df_out["SIPS_d_sum"] +  df_out["SIPS_g_sum"] )
+     # check psychosis criteria of at least one SIPS P score of 6
+     count_6 <- length(which(sips_p_scores == 6))
+     if(is.na(sum(sips_p_scores))){
+       df_out[,"SIPS_psychosis_6"] <- NA
+     }else if(count_6 > 0){
+       df_out[,"SIPS_psychosis_6"] <- 1
+     }else{
+       df_out[,"SIPS_psychosis_6"] <- 0
+     }
+     # check psychosis-spectrum criteria of at least one SIPS P >= 3
+     count_3 <- length(which(sips_p_scores >= 3))
+     if(is.na(sum(sips_p_scores))){
+       df_out[,"SIPS_psspectrum_3"] <- NA
+     }else if(count_3 > 0){
+       df_out[,"SIPS_psspectrum_3"] <- 1
+     }else{
+       df_out[,"SIPS_psspectrum_3"] <- 0
+     }
+   }
+   return(df_out)
+}
+
+# get sips 
+ucla_demo_sips <- lapply(1:nrow(ucla_demo), function(r) get_sips(r = r, demo=ucla_demo, sips = ucla_sips)) %>% do.call(rbind,.) %>% filter(!is.na(MRI_S_ID)) %>% filter(!MRI_S_ID %in% c("NO SCAN", "EXCLUDED"))
+
+# read IoP SIPS
+iop_sips <- read_xlsx(file.path(project,"demographics/22Qiop_SIPS.xlsx"), na = c(".","","-9999","-9998"),trim_ws =TRUE)
+
+# function to get psychosis status from SIPS
+# to be applied to the row indices of a demographics df, and also given the SIPS df
+get_sips_iop <- function(r, demo, sips){
+   mri_id <- demo$MRI_S_ID[[r]]
+   sub <- demo$SUBJECTID[[r]]
+   df_out <- data.frame(MRI_S_ID=mri_id, SUBJECTID=sub)
+   sips_sesh <- sips %>% filter(SUBJECTID == sub )
+   if(nrow(sips_sesh) < 1){
+     # if no match for sub+visit in sips table, set outputs to NA
+     df_out[, c("SIPS_p_sum", "SIPS_n_sum", "SIPS_d_sum", "SIPS_g_sum", "SIPS_total", "SIPS_psychosis_6", "SIPS_psspectrum_3")] <- rep(NA, times = 7)
+   }else if(nrow(sips_sesh) > 1){
+     # if more than one match for sub+visit, note error
+     df_out[, c("SIPS_p_sum", "SIPS_n_sum", "SIPS_d_sum", "SIPS_g_sum", "SIPS_total", "SIPS_psychosis_6", "SIPS_psspectrum_3")] <- rep("ERROR-duplicates", times = 7)
+   }else{
+     # get SIPS P scores
+     sips_p_scores <- sips_sesh[c("p1sev", "p2sev", "p3sev", "p4sev", "p5sev")]
+     # sum SIPS P
+     df_out[,"SIPS_p_sum"] <- sum(sips_p_scores)
+     # get SIPS N
+     sips_n_scores <- sips_sesh[c("N1sev", "N2sev", "N3sev", "N4sev", "N5sev", "N6sev")]
+     df_out[,"SIPS_n_sum"] <- sum(sips_n_scores)
+     # get SIPS D
+     sips_d_scores <- sips_sesh[c("D1sev", "D2sev", "D3sev", "D4sev")]
+     df_out[,"SIPS_d_sum"] <- sum(sips_d_scores)
+     # get SIPS G
+     sips_g_scores <- sips_sesh[c("G1sev", "G2sev", "G3sev", "G4sev")]
+     df_out[,"SIPS_g_sum"] <- sum(sips_g_scores)
+     # get SIPS total
+     df_out["SIPS_total"] <- (df_out["SIPS_p_sum"] +  df_out["SIPS_n_sum"] +  df_out["SIPS_d_sum"] +  df_out["SIPS_g_sum"] )
+     # check psychosis criteria of at least one SIPS P score of 6
+     count_6 <- length(which(sips_p_scores == 6))
+     if(is.na(sum(sips_p_scores))){
+       df_out[,"SIPS_psychosis_6"] <- NA
+     }else if(count_6 > 0){
+       df_out[,"SIPS_psychosis_6"] <- 1
+     }else{
+       df_out[,"SIPS_psychosis_6"] <- 0
+     }
+     # check psychosis-spectrum criteria of at least one SIPS P >= 3
+     count_3 <- length(which(sips_p_scores >= 3))
+     if(is.na(sum(sips_p_scores))){
+       df_out[,"SIPS_psspectrum_3"] <- NA
+     }else if(count_3 > 0){
+       df_out[,"SIPS_psspectrum_3"] <- 1
+     }else{
+       df_out[,"SIPS_psspectrum_3"] <- 0
+     }
+   }
+   return(df_out)
+}
+
+# get sips 
+iop_demo_sips <- lapply(1:nrow(demo_multisite_bl), function(r) get_sips_iop(r = r, demo=demo_multisite_bl, sips = iop_sips)) %>% do.call(rbind,.)
+
+# read SUNY SIPS
+suny_sips <- read_xlsx(file.path(project,"demographics/SUNY_T4_SIPS.xlsx"), na = c(".","","-9999","-9998"),trim_ws =TRUE)
+suny_sips_n <- suny_sips[,c("SUBJECT#", "Unusual thought content/delusional ideas", "Suspicious/Persecutory ideas", "Grandiose ideas", "Perceptual abnormalities/hallucinations", "Disorganized communication")]
+sips_p_names <- c("P1SEV", "P2SEV", "P3SEV", "P4SEV", "P5SEV")
+colnames(suny_sips_n) <- c("SUBJECTID", sips_p_names)
+suny_sips_n$MRI_S_ID <- gsub("S","X",suny_sips_n$SUBJECTID)
+suny_sips_n$SIPS_psspectrum_3 <- NA
+for(r in 1:nrow(suny_sips_n)){
+  count_3 <- length(which(suny_sips_n[r,sips_p_names] >= 3))
+  if(is.na(sum(suny_sips_n[r,sips_p_names]))){
+    suny_sips_n[r,"SIPS_psspectrum_3"] <- NA
+  }else if(count_3 > 0){
+    suny_sips_n[r,"SIPS_psspectrum_3"] <- 1
+  }else{
+    suny_sips_n[r,"SIPS_psspectrum_3"] <- 0
+  }
+}
+
+# combine all SIPS
+all_SIPS_22q <- rbind(filter(ucla_demo_sips, !is.na(SIPS_psspectrum_3))[,c("MRI_S_ID","SIPS_psspectrum_3")],
+                  filter(iop_demo_sips, !is.na(SIPS_psspectrum_3))[,c("MRI_S_ID","SIPS_psspectrum_3")],
+                  filter(suny_sips_n, !is.na(SIPS_psspectrum_3))[,c("MRI_S_ID","SIPS_psspectrum_3")])
+all_SIPS_22q$psychosis_risk <- all_SIPS_22q$SIPS_psspectrum_3
+
+# merge with demographics
+all_SIPS_22q_demo <- merge(x=all_SIPS_22q, y=demo_multisite_bl, by="MRI_S_ID", all.x=FALSE, all.y=TRUE) 
+
+# calculate percentage of 22qDel meeting criteria for SIPS
+count_psrisk <- sum(filter(all_SIPS_22q_demo, Group=="22qDel")$SIPS_psspectrum_3, na.rm = TRUE)
+count_0 <- sum((filter(all_SIPS_22q_demo, Group=="22qDel")$SIPS_psspectrum_3 == 0), na.rm = TRUE)
+count_na <- sum(is.na(filter(all_SIPS_22q_demo, Group=="22qDel")$SIPS_psspectrum_3), na.rm = TRUE)
+frac_22q_psrisk <- count_psrisk/(count_psrisk + count_0 + count_na)
+frac_22q_psrisk_nona <- count_psrisk/(count_psrisk + count_0)
+# 0.2743902
+# 0.323741
+
+# read Rome PANSS
+rome_PANSS <- read_xlsx(file.path(project,"demographics/ENIGMA_27_FEB_22_ROME.xlsx"), na = c(".","","-9999","-9998"),trim_ws =TRUE)
+rome_PANSS$MRI_S_ID <- rome_PANSS$SubjID
+rome_PANSS$PANSS_PS %<>% as.numeric
+#hist(rome_PANSS$PANSS_PS)
+# get threshold for PANSS that would give same percentile of people as SIPS cutoff excluding NAs (i.e., top 32%)
+panss_cut <- quantile(rome_PANSS$PANSS_PS, prob=(1-0.32), na.rm = TRUE)
+rome_PANSS$psychosis_risk <- rome_PANSS$PANSS_PS >= panss_cut
+
+# combine all
+psrisk_22q_all <- rbind(all_SIPS_22q[,c("MRI_S_ID","psychosis_risk")],
+                        rome_PANSS[,c("MRI_S_ID","psychosis_risk")])
+# set NA to zero and convert to Y/N factor
+psrisk_22q_all[which(is.na(psrisk_22q_all$psychosis_risk)),"psychosis_risk"] <- 0
+psrisk_22q_all$psychosis_risk <- factor(psrisk_22q_all$psychosis_risk, levels=c(0,1), labels=c("N","Y"))
+
+# ensure all with official psychosis dx are labeled as Y for psychosis_risk
+psrisk_22q_all[which(psrisk_22q_all$MRI_S_ID %in% filter(demo_multisite, psych_dx=="Y")$MRI_S_ID),"psychosis_risk"] <- "Y"
+
+# merge with demo
+demo_22q_psrisk <- merge(x=demo_multisite_bl, y=psrisk_22q_all, by="MRI_S_ID", all.x=TRUE, all.y=FALSE)
+
+```
+
+lm of psychosis risk in 22q
+```{r}
+# test linear model comparing psychosis dx within patients
+rsfa_22q_psrisk <- get_parcel_group_lm(list=add_demo_cols(list=rsfa_wide, demo=demo_22q_psrisk, democols="psychosis_risk"), groupcol="psychosis_risk", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("RSFA 22q significant psychosis risk effects:",sum(rsfa_22q_psrisk$group_FDR_sig)))
+
+netho_22q_psrisk <- get_parcel_group_lm(list=add_demo_cols(list=netho_wide, demo=demo_22q_psrisk, democols="psychosis_risk"), groupcol="psychosis_risk", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("NetHo 22q significant psychosis risk effects:",sum(netho_22q_psrisk$group_FDR_sig)))
+
+gbc_22q_psrisk <- get_parcel_group_lm(list=add_demo_cols(list=gbc_wide, demo=demo_22q_psrisk, democols="psychosis_risk"), groupcol="psychosis_risk", groups=c("Y","N"), refgroup="N", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="22qDel")
+print(paste("GBC 22q significant psychosis risk effects:",sum(gbc_22q_psrisk$group_FDR_sig)))
+
+# get counts
+print("22qDel psychosis risk subject counts:")
+filter(add_demo_cols(list=rsfa_wide, demo=demo_22q_psrisk, democols="psychosis_risk")$df, Group=="22qDel")$psychosis_risk %>% as.factor %>% summary
 ```
 
 lm of SIPS positive for regions with significant CHR effect on LC
