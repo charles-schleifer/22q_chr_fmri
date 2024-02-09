@@ -63,7 +63,7 @@ rgl::rgl.open(); rgl::rgl.close()
 save_outputs=TRUE
 
 # load Rdata instead of loading individual files
-# load(file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"))
+# load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
 # load(file.path(project,"git_exclude/22q_chr_fmri_main.Rdata"))
 # load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
 ```
@@ -437,7 +437,7 @@ sink()
 
 # save image
 if(save_outputs==TRUE){
-  save.image(file=file.path(project,"demographics/22q_chr_fmri_init_ctx.Rdata"),compress = "bzip2")
+  save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
 }
 ```
 
@@ -1300,7 +1300,7 @@ hmap_cor <- ggplot(maps_replace, aes(x=Var1,y=Var2))+
   theme_void(base_size = 13)+
   geom_tile(aes(fill=value), color="black")+
   geom_point(aes(color=value_p05, shape=!is.na(value_p05)),size=17)+
-  scale_shape_manual(values=c(NA,19))+
+  scale_shape_manual(values=c(NA,19), labels=c("p > 0.05","p < 0.05"))+
   scale_fill_scico(palette="vik",limits=c(-0.6,0.6),na.value="white")+
   scale_color_scico(palette="vik",limits=c(-0.6,0.6),na.value="white")+
   scale_size(range = c(2,12))+
@@ -1319,7 +1319,7 @@ hmap_cor <- ggplot(maps_replace, aes(x=Var1,y=Var2))+
   ggtitle("Correlations between fMRI case-control maps")+
   guides(fill = guide_colourbar(order = 2, title="Pearson's r"),
          color = "none",
-         shape = guide_legend(order=1, title="p < 0.05",frame.colour = "black", frame.linewidth = 20))
+         shape = guide_legend(order=1, title="Significance\n(upper triangle)", ,frame.colour = "black", frame.linewidth = 20))
 plot(hmap_cor)
 
 if(save_outputs==TRUE){
@@ -2344,6 +2344,18 @@ print(paste("GBC 22q significant psychosis risk effects:",sum(gbc_22q_psrisk$gro
 print("22qDel psychosis risk subject counts:")
 filter(add_demo_cols(list=rsfa_wide, demo=demo_22q_psrisk, democols="psychosis_risk")$df, Group=="22qDel")$psychosis_risk %>% as.factor %>% summary
 ```
+overlap of significant CHR LC with 22q LC
+```{r lcOverlap}
+# get labels of significant LC regions
+lc_chr_sig <- filter(netho_chr_lms, group_FDR_sig==TRUE)$LABEL
+lc_22q_sig <- filter(netho_22q_lms, group_FDR_sig==TRUE)$LABEL
+
+# proportion of CHR in 22q
+sum(lc_chr_sig %in% lc_22q_sig)
+length(lc_chr_sig)
+sum(lc_chr_sig %in% lc_22q_sig)/length(lc_chr_sig)
+lc_chr_sig[which(lc_chr_sig %in% lc_22q_sig)]
+```
 
 lm of SIPS positive for regions with significant CHR effect on LC
 ```{r supSIPSCHR}
@@ -2354,6 +2366,7 @@ lm of SIPS positive for regions with significant CHR effect on LC
 # netho_chr_sipsp <- get_parcel_bhv_lm(list=add_demo_cols(list=netho_wide, demo=demo_napls_sips), statname="IQ_full", covars="SEX + Site + percent_udvarsme", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360), filter=TRUE, filtercol="Group", filterin="CHR")
 
 ```
+
 
 save workspace with main data
 ```{r paged.print=FALSE}
