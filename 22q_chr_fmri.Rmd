@@ -60,7 +60,7 @@ rgl::setupKnitr()
 rgl::rgl.open(); rgl::rgl.close()
 
 # set to TRUE to save outputs, otherwise won't save
-save_outputs=TRUE
+save_outputs=FALSE
 
 # load Rdata instead of loading individual files
 # load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
@@ -236,7 +236,7 @@ demo_22q_napls_all <- demo_22q_napls
 
 demo_multisite_bl$Group <- factor(demo_multisite_bl$SUBJECT_IDENTITY,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
 demo_multisite_bl$SEX <- factor(demo_multisite_bl$SEX, levels=c("M","F"))
-demo_multisite_bl$cardiac <- factor(demo_multisite_bl$cardiac, levels=c(0,1), labels=c("N","Y"))
+demo_multisite_bl$cardiac <- factor(demo_multisite_bl$cardiac, levels=c("N","Y"))
 
 #demo_22q_all <- filter(demo_22q_napls_all, Group %in% c("22qDel", "CONTROL")) %>% droplevels
 demo_napls_all <- filter(demo_22q_napls_all, Group %in% c("CHR", "CONTROL-N")) %>% droplevels
@@ -793,6 +793,67 @@ if(save_outputs==TRUE){
 }
 ```
 
+test CONTROL vs 0
+```{r T0}
+# function to return residuals
+lm_parcel_group_resid <- function(df, var, predictors, groups, groupcol, refgroup, test_out_model=FALSE){
+  # create formula with var on left side and predictors string on right
+  form <- reformulate(predictors,response=var)
+  # test linear model
+  lm <- lm(formula=form,data=df, na.action="na.omit")
+  slm <- summary(lm)
+  resids <- slm$residuals
+  return(resids)
+}
+
+# function to apply single group t-test against zero at each parcel for the residual after adjustment for covariates, expects list object output from rows_to_cols
+# defaults, including formula predictors, are set in function but different values can be specified
+# groups should be a vector specifying which groups should be ussed
+get_parcel_group_T0 <- function(list, 
+                                groupcol="Group", 
+                                refgroup="CONTROL",
+                                sitecol="Site",
+                                refsite,
+                                covars="AGE + AGE2 + SEX + Site + percent_udvarsme", 
+                                alpha=0.05, 
+                                roi_key=ji_key,
+                                prefix="r_"){
+  # add group to string of model variables
+  predictors <- paste(groupcol, "+", covars)
+  # filter by specified groups and relevel factor
+  df_all <- as.data.frame(list$df)
+  df_all$groupcol <- df_all[,groupcol]
+  # filter groupcol in groups
+  df <- filter(df_all, groupcol == refgroup)
+  df[,groupcol] <- relevel(as.factor(df[,groupcol]), ref=refgroup)
+  # relevel site
+  df[,sitecol] <- relevel(as.factor(df[,sitecol]), ref=refsite)
+  # do linear model for every parcel, FDR correct p-values, and create column of betas set to NA when not FDR significant
+  parc_cols <- list$parcels
+  resids <- lapply(parc_cols, function(v) lm_parcel_group_resid(var=v, df=df, predictors=covars, groups=groups, groupcol=groupcol, refgroup=refgroup)) 
+  t0 <- lapply(resids, function(r) t.test(r, mu=0, alternative="two.sided")$statistic) %>% do.call(rbind,.) %>% as.data.frame
+  colnames(t0) <- c("t0")
+  # add index column and merge with roi key (assumes column named INDEX in roi_key)
+  t0$indexcol <- parc_cols
+  t0$INDEX <- gsub(prefix,"",t0$indexcol)
+  out <- merge(x=roi_key, y=t0, by="INDEX", all.x=TRUE, all.y=TRUE)
+  return(out)
+}
+#test <- get_parcel_group_T0(list=rsfa_wide,refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
+```
+
+```{r controlT0}
+# t-test against zero for resids after adjusting for covars in control groups
+rsfa_control_t0 <- get_parcel_group_T0(list=rsfa_wide, refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
+rsfa_controln_t0 <- get_parcel_group_T0(list=rsfa_wide, refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+
+netho_control_t0 <- get_parcel_group_T0(list=netho_wide, refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
+netho_controln_t0 <- get_parcel_group_T0(list=netho_wide, refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+
+gbc_control_t0 <- get_parcel_group_T0(list=gbc_wide, refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
+gbc_controln_t0 <- get_parcel_group_T0(list=gbc_wide, refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
+```
+
 plot group difference maps
 ```{r funcPlotMRI, message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to take xifti atlas (with ROIs denoted by unique values) and return list of xifti matrix indices by brain structure for each ROI
@@ -948,6 +1009,14 @@ view_xifti_surface(pl_gbc_chr_b, title="Global Connectivity: CHR vs TD", cex.tit
 if(save_outputs==TRUE){
   view_xifti_surface(pl_gbc_chr_b,zlim=c(-0.8,0.8), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_chr_b.png"),legend_embed=FALSE, legend_fname = file.path(project,"figures/fmri_maps/legend.png"))
 }
+```
+
+plot control t-test against 0
+```{r plotT0}
+pl_rsfa_control <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_control_t0, roi_col="INDEX", val_col="t0")
+view_xifti_surface(pl_rsfa_control, title="Brain Signal Variability: Control-22q", cex.title=1.3, colors=pal_red_blue())
+# t-values are tiny because residuals are zero-centered
+
 ```
 
 write files for brainsmash null model generation
@@ -1999,7 +2068,7 @@ within 22qDel group, LM comparing with/without congenital cardiac Dx (currently 
 ```{r supCardiac}
 # exclude rome and SUNY until confirmed
 demo_cardiac <- demo_multisite_bl
-demo_cardiac[which(demo_cardiac$Site %in% c("Rome","SUNY")),"cardiac"] <- NA
+#demo_cardiac[which(demo_cardiac$Site %in% c("Rome","SUNY")),"cardiac"] <- NA
 
 # get main effects of group for each measure
 # TODO: add cardiac status for Rome (currently NA), and confirm SUNY

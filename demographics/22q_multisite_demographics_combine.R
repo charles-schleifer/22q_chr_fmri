@@ -147,7 +147,7 @@ card_tf$cardiac <- lapply(card_tf$SUBJECTID,function(s)sum(filter(pheno_card, SU
 # merge cardiac info with dataframe and set NA to FALSE then convert to numeric
 ucla_demo_use <- merge(x=ucla_demo_use, y=card_tf, by=c("SUBJECTID"), all.x=TRUE)
 ucla_demo_use[which(is.na(ucla_demo_use$cardiac)),"cardiac"] <- FALSE
-ucla_demo_use$cardiac %<>% as.numeric
+ucla_demo_use$cardiac <- factor(ucla_demo_use$cardiac, levels=c(FALSE,TRUE), labels=c("N","Y"))
 
 
 # manually fix missing sex for Q_0381_09102019
@@ -222,15 +222,14 @@ SUNY_demo_use$psych_dx <- factor(SUNY_demo_use$MRI_S_ID %in% suny_psychdx_subs, 
 SUNY_demo_use$SUBJECTID <- SUNY_demo_use$MRI_S_ID
 
 # cardiac
-SUNY_surgery <- read_xlsx(file.path(demopath,"multisite/SUNY_Surgery.xlsx"),trim_ws=T, na="", col_names=T)
-SUNY_surgery$SUBJECTID <- SUNY_surgery$SUBJECT. %>% gsub("S","X",.) 
-# manually remove one comment then convert to boolean
-SUNY_surgery$CARDIAC %<>% gsub(fixed=TRUE," (9months)","",.)
-SUNY_surgery$cardiac <- SUNY_surgery$CARDIAC != "0"
+SUNY_dev <- read_xlsx(file.path(demopath,"multisite/SUNY_DEV-Q.xlsx"),trim_ws=T, na="", col_names=T)
+SUNY_dev$SUBJECTID <- SUNY_dev$SUBJECT. %>% gsub("S","X",.)
+SUNY_dev[which(is.na(SUNY_dev$Heart)),"Heart"] <- 0
+SUNY_dev$cardiac <- factor(SUNY_dev$Heart, levels=c(0, 1), labels=c("N","Y"))
 # merge cardiac info with dataframe and set NA to FALSE then convert to numeric
-SUNY_demo_use <- merge(x=SUNY_demo_use, y=SUNY_surgery[,c("SUBJECTID","cardiac")], by=c("SUBJECTID"), all.x=TRUE)
-SUNY_demo_use[which(is.na(SUNY_demo_use$cardiac)),"cardiac"] <- FALSE
-SUNY_demo_use$cardiac %<>% as.numeric
+SUNY_demo_use <- merge(x=SUNY_demo_use, y=SUNY_dev[,c("SUBJECTID","cardiac")], by=c("SUBJECTID"), all.x=TRUE)
+#SUNY_demo_use[which(is.na(SUNY_demo_use$cardiac)),"cardiac"] <- FALSE
+
 
 # filter based on suny list
 ages_suny_subset <- filter(SUNY_demo_use, SUNY_demo_use$MRI_S_ID %in% sessions_suny)[,c("MRI_S_ID","SUBJECTID","SUBJECT_IDENTITY","AGE","SEX","RACE","HISPANIC","Med_Antipsychotic","psych_dx","IQ_full","IQ_measure","cardiac")]
@@ -296,9 +295,9 @@ iop_card_tf <- data.frame(SUBJECTID=unique(iop_pheno_card$SUBJECTID) )
 iop_card_tf$cardiac <- lapply(iop_card_tf$SUBJECTID,function(s)sum(filter(iop_pheno_card, SUBJECTID==s)[,paste0("heart",1:20)])>0) %>% do.call(rbind,.)
 
 # merge cardiac info with dataframe and set NA to FALSE then convert to numeric
-iop_demo_use <- merge(x=iop_demo_use, y=card_tf, by=c("SUBJECTID"), all.x=TRUE)
+iop_demo_use <- merge(x=iop_demo_use, y=iop_card_tf, by=c("SUBJECTID"), all.x=TRUE)
 iop_demo_use[which(is.na(iop_demo_use$cardiac)),"cardiac"] <- FALSE
-iop_demo_use$cardiac %<>% as.numeric
+iop_demo_use$cardiac <- factor(iop_demo_use$cardiac, levels=c(FALSE,TRUE), labels=c("N","Y"))
 
 # take only desired variables 
 ages_iop_subset <- iop_demo_use[,c("MRI_S_ID","SUBJECTID","SUBJECT_IDENTITY","AGE","SEX","RACE","HISPANIC","Med_Antipsychotic","psych_dx","IQ_full","IQ_measure","cardiac")]
@@ -343,9 +342,16 @@ rome_demo_use$psych_dx <- factor(rome_demo_use$Psychotic_Disorder,levels=c(0,1),
 # replicate MRI_S_ID as SUBJECTID
 rome_demo_use$SUBJECTID <- rome_demo_use$MRI_S_ID
 
+# cardiac
+
+rome_heart <- read_xlsx(file.path(demopath,"multisite/CHD_del22_Rome_Enigma.xlsx"),trim_ws=T, na="", col_names=T) %>% rename("SUBJECTID"="SubjID")
+rome_heart$cardiac <- factor(rome_heart$CHD, levels=c(1, 2), labels=c("Y","N"))
+# merge cardiac info with dataframe and set NA to FALSE then convert to numeric
+rome_demo_use <- merge(x=rome_demo_use, y=rome_heart[,c("SUBJECTID","cardiac")], by=c("SUBJECTID"), all.x=TRUE)
+rome_demo_use[which(is.na(rome_demo_use$cardiac)),"cardiac"] <- "N"
+
 # take only desired variables 
-ages_rome_subset <- rome_demo_use[,c("MRI_S_ID","SUBJECTID","SUBJECT_IDENTITY","AGE","SEX","RACE","HISPANIC","Med_Antipsychotic","psych_dx","IQ_full","IQ_measure")]
-ages_rome_subset$cardiac <-NA
+ages_rome_subset <- rome_demo_use[,c("MRI_S_ID","SUBJECTID","SUBJECT_IDENTITY","AGE","SEX","RACE","HISPANIC","Med_Antipsychotic","psych_dx","IQ_full","IQ_measure","cardiac")]
 ages_rome_subset$visit_index <- rep(as.factor(1),times=nrow(ages_rome_subset))
 ages_rome_subset$Site <- rep("Rome",times=nrow(ages_rome_subset))
 ages_rome_subset %<>% as.data.frame
@@ -358,6 +364,8 @@ multi_demo$AGE <- signif(as.numeric(multi_demo$AGE), digits=2)
 multi_demo$Med_Antipsychotic[is.na(multi_demo$Med_Antipsychotic)] <- "N"
 multi_demo$psych_dx[is.na(multi_demo$psych_dx)] <- "N"
 multi_demo <- filter(multi_demo, SUBJECT_IDENTITY == "PATIENT-DEL" | SUBJECT_IDENTITY == "CONTROL")
+multi_demo[which(is.na(multi_demo$cardiac)),"cardiac"] <- "N"
+
 #View(multi_demo)
 #write.csv(multi_demo, file=file.path(demopath,"multisite/22q_multisite_demo.csv"),row.names = FALSE)
 
