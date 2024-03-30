@@ -2412,7 +2412,15 @@ print(paste("GBC 22q significant psychosis risk effects:",sum(gbc_22q_psrisk$gro
 # get counts
 print("22qDel psychosis risk subject counts:")
 filter(add_demo_cols(list=rsfa_wide, demo=demo_22q_psrisk, democols="psychosis_risk")$df, Group=="22qDel")$psychosis_risk %>% as.factor %>% summary
+
+# make new column with proper labels to compare psrisk to controls (Y=22qDel with psychosis risk, N=22qDel without, C=Control22q)
+demo_22q_psrisk$psrisk_td <- demo_22q_psrisk$psychosis_risk %>% as.character
+demo_22q_psrisk[which(demo_22q_psrisk$Group =="CONTROL"),"psrisk_td"] <- "C"
+demo_22q_psrisk$psrisk_td %<>% as.factor
+
+
 ```
+
 overlap of significant CHR LC with 22q LC
 ```{r lcOverlap}
 # get labels of significant LC regions
@@ -2436,6 +2444,46 @@ lm of SIPS positive for regions with significant CHR effect on LC
 
 ```
 
+demo tables for each site
+```{r supDemo, message=FALSE, warning=FALSE, paged.print=FALSE}
+# function to create demo table for a given site
+make_demo_site <- function(data, site, strata="Group", vars=c("AGE","SEX"), rownames=c("n", "Age, Years, Mean (SD)", "Sex, Female, n (%)")){
+  df <- filter(data, Site==site)
+  demo_table <- CreateTableOne(data=df, strata=strata, vars=vars)
+  demo_table_f <- print(demo_table, showAllLevels = F, test=T,quote=F, contDigits=1) %>% as.data.frame
+  rownames(demo_table_f) <- rownames
+  site <- data.frame(Site=c(site,rep("", times=length(vars))))
+  rownames_df <- data.frame(Demographics=rownames)
+  demo_table_s <- cbind(site,rownames_df,demo_table_f[,1:3])
+  rownames(demo_table_s) <- NULL
+
+  return(demo_table_s)
+}
+
+site_demo_22q <- lapply(c("UCLAtrio", "UCLAprisma", "SUNY", "Rome", "IoP"),function(s) make_demo_site(site=s, data=demo_multisite_bl)) %>% do.call(rbind,.) %>% as.data.frame
+site_demo_22q$Site <- gsub("IoP","KCL",site_demo_22q$Site)
+
+site_demo_napls <- lapply(unique(demo_napls_all$Site),function(s) make_demo_site(site=s, data=demo_napls_all)) %>% do.call(rbind,.) %>% as.data.frame
+site_demo_napls$Site <- gsub("NAPLS","0",site_demo_napls$Site)
+
+# use gt() to make table for export
+# instructions for bolding specific headers https://gt.rstudio.com/reference/tab_style.html
+site_demo_22q_out <- site_demo_22q %>% gt(rownames_to_stub=FALSE) %>%
+  tab_style(style = cell_text(weight = "bold"),locations = list(cells_column_labels())) %>%
+  tab_options(data_row.padding = px(1)) %>%
+  cols_align(align="right", columns=everything())
+
+site_demo_napls_out <- site_demo_napls %>% gt(rownames_to_stub=FALSE) %>%
+  tab_style(style = cell_text(weight = "bold"),locations = list(cells_column_labels())) %>%
+  tab_options(data_row.padding = px(1)) %>%
+  cols_align(align="right", columns=everything())
+
+if(save_outputs==TRUE){
+   gtsave(site_demo_22q_out, filename = file.path(project,"figures/demographics/supplemental_22q_sites.png"))
+   gtsave(site_demo_napls_out, filename = file.path(project,"figures/demographics/supplemental_napls_sites.png"))
+
+}
+```
 
 save workspace with main data
 ```{r paged.print=FALSE}
