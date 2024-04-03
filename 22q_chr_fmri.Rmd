@@ -1990,7 +1990,8 @@ nmap_table <- nmap_table_update(df=nmap_table, map="ROI size", modality="sMRI", 
 # output table
 nmap_table_out <- nmap_table %>% gt() %>% 
   tab_style(style = cell_text(weight = "bold"),locations = list(cells_column_labels())) %>%
-  cols_align(align="left", columns=everything())
+  cols_align(align="left", columns=everything())%>%
+  tab_options(data_row.padding = px(1))
 
 # fix to stop gtsave from erroring
 # https://github.com/rstudio/gt/issues/1077
