@@ -630,10 +630,11 @@ combat_plot_rsfa
 combat_plot_netho
 combat_plot_gbc
 ```
+
 convert normed combat results back to wide df merged with demographics
 ```{r demoComBat}
 # function to convert long to wide df with indices (renamed to r_index) as columns
-rows_to_cols <- function(results, demo, index_colname="INDEX"){
+rows_to_cols <- function(results, demo, index_colname="INDEX", value_var="value_normed"){
   df <- as.data.frame(results)
   # add prefix "r_" to parcel indices to use as column names in wide df 
   df$index_col <- paste0("r_",df[,index_colname])
@@ -642,7 +643,7 @@ rows_to_cols <- function(results, demo, index_colname="INDEX"){
   # list of new column names
   parc_cols <- unique(dt$index_col)
   # make wide df with column from MRI_S_ID and one column per parcel with cells containing normed combat value
-  dt_wide <- reshape2::dcast(dt, MRI_S_ID ~ index_col, value.var="value_normed") 
+  dt_wide <- reshape2::dcast(dt, MRI_S_ID ~ index_col, value.var=value_var) 
   # order cols
   dt_wide_order <- dt_wide[,c("MRI_S_ID", parc_cols)]
   # merge with demo table 
@@ -785,6 +786,7 @@ print(paste("NetHo CHRc vs CHR significant regions:",sum(netho_chrcchr_lms$group
 gbc_chrcchr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("GBC CHRc vs CHR significant regions:",sum(gbc_chrcchr_lms$group_FDR_sig)))
 ```
+
 save workspace with main data
 ```{r saveMain, paged.print=FALSE}
 # save image
@@ -793,66 +795,6 @@ if(save_outputs==TRUE){
 }
 ```
 
-test CONTROL vs 0
-```{r T0}
-# function to return residuals
-lm_parcel_group_resid <- function(df, var, predictors, groups, groupcol, refgroup, test_out_model=FALSE){
-  # create formula with var on left side and predictors string on right
-  form <- reformulate(predictors,response=var)
-  # test linear model
-  lm <- lm(formula=form,data=df, na.action="na.omit")
-  slm <- summary(lm)
-  resids <- slm$residuals
-  return(resids)
-}
-
-# function to apply single group t-test against zero at each parcel for the residual after adjustment for covariates, expects list object output from rows_to_cols
-# defaults, including formula predictors, are set in function but different values can be specified
-# groups should be a vector specifying which groups should be ussed
-get_parcel_group_T0 <- function(list, 
-                                groupcol="Group", 
-                                refgroup="CONTROL",
-                                sitecol="Site",
-                                refsite,
-                                covars="AGE + AGE2 + SEX + Site + percent_udvarsme", 
-                                alpha=0.05, 
-                                roi_key=ji_key,
-                                prefix="r_"){
-  # add group to string of model variables
-  predictors <- paste(groupcol, "+", covars)
-  # filter by specified groups and relevel factor
-  df_all <- as.data.frame(list$df)
-  df_all$groupcol <- df_all[,groupcol]
-  # filter groupcol in groups
-  df <- filter(df_all, groupcol == refgroup)
-  df[,groupcol] <- relevel(as.factor(df[,groupcol]), ref=refgroup)
-  # relevel site
-  df[,sitecol] <- relevel(as.factor(df[,sitecol]), ref=refsite)
-  # do linear model for every parcel, FDR correct p-values, and create column of betas set to NA when not FDR significant
-  parc_cols <- list$parcels
-  resids <- lapply(parc_cols, function(v) lm_parcel_group_resid(var=v, df=df, predictors=covars, groups=groups, groupcol=groupcol, refgroup=refgroup)) 
-  t0 <- lapply(resids, function(r) t.test(r, mu=0, alternative="two.sided")$statistic) %>% do.call(rbind,.) %>% as.data.frame
-  colnames(t0) <- c("t0")
-  # add index column and merge with roi key (assumes column named INDEX in roi_key)
-  t0$indexcol <- parc_cols
-  t0$INDEX <- gsub(prefix,"",t0$indexcol)
-  out <- merge(x=roi_key, y=t0, by="INDEX", all.x=TRUE, all.y=TRUE)
-  return(out)
-}
-#test <- get_parcel_group_T0(list=rsfa_wide,refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-```
-
-```{r controlT0}
-# t-test against zero for resids after adjusting for covars in control groups
-rsfa_control_t0 <- get_parcel_group_T0(list=rsfa_wide, refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-rsfa_controln_t0 <- get_parcel_group_T0(list=rsfa_wide, refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-
-netho_control_t0 <- get_parcel_group_T0(list=netho_wide, refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-netho_controln_t0 <- get_parcel_group_T0(list=netho_wide, refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-
-gbc_control_t0 <- get_parcel_group_T0(list=gbc_wide, refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-gbc_controln_t0 <- get_parcel_group_T0(list=gbc_wide, refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-```
 
 plot group difference maps
 ```{r funcPlotMRI, message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -1011,12 +953,78 @@ if(save_outputs==TRUE){
 }
 ```
 
-plot control t-test against 0
-```{r plotT0}
-pl_rsfa_control <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_control_t0, roi_col="INDEX", val_col="t0")
-view_xifti_surface(pl_rsfa_control, title="Brain Signal Variability: Control-22q", cex.title=1.3, colors=pal_red_blue())
-# t-values are tiny because residuals are zero-centered
+test CONTROL means
+```{r cMean}
+# example df to end up with rsfa_22q_lms
 
+# start with rsfa_combat_22q
+
+# function to get ROI means
+get_roi_means <- function(combat_result, group, demo=demo_22q_napls){
+  wide <- rows_to_cols(results=combat_result, demo=demo, value_var = "value")
+  wide_c <- filter(wide$df, Group==group)
+  c_means <- colMeans(wide_c[,wide$parcels])
+  df <- data.frame(roi=names(c_means),value=c_means)
+  df$INDEX <- gsub("r_","",df$roi) %>% as.numeric
+  return(df)
+}
+
+# 22q Control 
+control_22q_rsfa <- get_roi_means(combat_result=rsfa_combat_22q, group="CONTROL")
+control_22q_netho <- get_roi_means(combat_result=netho_combat_22q, group="CONTROL")
+control_22q_gbc <- get_roi_means(combat_result=gbc_combat_22q, group="CONTROL")
+
+# NAPLS Control
+control_n_rsfa <- get_roi_means(combat_result=rsfa_combat_napls, group="CONTROL-N")
+control_n_netho <- get_roi_means(combat_result=netho_combat_napls, group="CONTROL-N")
+control_n_gbc <- get_roi_means(combat_result=gbc_combat_napls, group="CONTROL-N")
+```
+
+plot control means
+```{r plotControl}
+save_outputs==TRUE
+
+# BSV
+pl_rsfa_control_22q <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_22q_rsfa, roi_col="INDEX", val_col="value")
+view_xifti_surface(pl_rsfa_control_22q, title="Control22q Mean BSV", cex.title=1.3, colors="magma")
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_rsfa_control_22q, colors="magma", fname=file.path(project,"figures/fmri_maps/control22q_bsv.png"),legend_embed=TRUE)
+}
+
+pl_rsfa_control_n <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_n_rsfa, roi_col="INDEX", val_col="value")
+view_xifti_surface(pl_rsfa_control_n, title="ControlCHR Mean BSV", cex.title=1.3, colors="magma")
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_rsfa_control_n, colors="magma", fname=file.path(project,"figures/fmri_maps/controlCHR_bsv.png"),legend_embed=TRUE)
+}
+
+# LC
+pl_netho_control_22q <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_22q_netho, roi_col="INDEX", val_col="value")
+view_xifti_surface(pl_netho_control_22q, title="Control22q Mean LC", cex.title=1.3, colors=pal_red_blue())
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_netho_control_22q, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/control22q_lc.png"),legend_embed=TRUE)
+}
+
+
+pl_netho_control_n <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_n_netho, roi_col="INDEX", val_col="value")
+view_xifti_surface(pl_netho_control_n, title="ControlCHR Mean LC", cex.title=1.3, colors=pal_red_blue())
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_netho_control_n, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/controlCHR_lc.png"),legend_embed=TRUE)
+}
+
+# GBC
+pl_gbc_control_22q <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_22q_gbc, roi_col="INDEX", val_col="value")
+view_xifti_surface(pl_gbc_control_22q, title="Control22q Mean GBC", cex.title=1.3, colors=pal_red_blue())
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_gbc_control_22q, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/control22q_gbc.png"),legend_embed=TRUE)
+}
+
+pl_gbc_control_n <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_n_gbc, roi_col="INDEX", val_col="value")
+view_xifti_surface(pl_gbc_control_n, title="ControlNAPLS Mean GBC", cex.title=1.3, colors=pal_red_blue())
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_gbc_control_n, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/controlCHR_gbc.png"),legend_embed=TRUE)
+}
+
+save_outputs==FALSE
 ```
 
 write files for brainsmash null model generation
@@ -1595,7 +1603,7 @@ univariate AHBA correlations
 # rsfa_ahba_abs95 <- get_quantile_genes(df=rsfa_ahba_cor, probs=0.95, alternative="two.sided")
 ```
 
-calculates 1-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
+calculates 2-tailed p-value based on how many test stats from the null distribution are greater than the true test stat
 ```{r mapPermuteCor}
 # permutation correlation 
 map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:10000), verbose=FALSE, method="pearson", use="complete.obs"){
