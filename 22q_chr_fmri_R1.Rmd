@@ -952,7 +952,7 @@ if(save_outputs==TRUE){
 }
 ```
 
-test CONTROL means
+test control means
 ```{r cMean}
 # example df to end up with rsfa_22q_lms
 
@@ -1118,6 +1118,66 @@ if(save_bsmash_outputs==TRUE){
   write.table(gbc_chr_lms_R_b, file=file.path(project,"CAB-NP/CHR_TD_GBC_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
 
+#####
+save_bsmash_outputs=TRUE
+# write control means
+# 22q Control 
+control_22q_rsfa_L <- filter(control_22q_rsfa, INDEX <= 180)
+if(save_bsmash_outputs==TRUE){
+  write.table(control_22q_rsfa_L, file=file.path(project,"CAB-NP/control_22q_rsfa_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_22q_netho_L <- filter(control_22q_netho, INDEX <= 180)
+if(save_bsmash_outputs==TRUE){
+  write.table(control_22q_netho_L, file=file.path(project,"CAB-NP/control_22q_netho_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_22q_gbc_L <- filter(control_22q_gbc, INDEX <= 180) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_22q_gbc_L, file=file.path(project,"CAB-NP/control_22q_gbc_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+
+
+control_22q_rsfa_R <- filter(control_22q_rsfa, INDEX > 180 & INDEX <= 360) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_22q_rsfa_R, file=file.path(project,"CAB-NP/control_22q_rsfa_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_22q_netho_R <- filter(control_22q_netho, INDEX > 180 & INDEX <= 360)
+if(save_bsmash_outputs==TRUE){
+  write.table(control_22q_netho_R, file=file.path(project,"CAB-NP/control_22q_netho_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_22q_gbc_R <- filter(control_22q_gbc, INDEX > 180 & INDEX <= 360) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_22q_gbc_R, file=file.path(project,"CAB-NP/control_22q_gbc_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+
+
+control_n_rsfa_L <- filter(control_n_rsfa, INDEX <= 180) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_n_rsfa_L, file=file.path(project,"CAB-NP/control_n_rsfa_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_n_netho_L <- filter(control_n_netho, INDEX <= 180) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_n_netho_L, file=file.path(project,"CAB-NP/control_n_netho_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_n_gbc_L <- filter(control_n_gbc, INDEX <= 180) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_n_gbc_L, file=file.path(project,"CAB-NP/control_n_gbc_L"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+
+
+control_n_rsfa_R <- filter(control_n_rsfa, INDEX > 180 & INDEX <= 360) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_n_rsfa_R, file=file.path(project,"CAB-NP/control_n_rsfa_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_n_netho_R <- filter(control_n_netho, INDEX > 180 & INDEX <= 360)
+if(save_bsmash_outputs==TRUE){
+  write.table(control_n_netho_R, file=file.path(project,"CAB-NP/control_n_netho_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+control_n_gbc_R <- filter(control_n_gbc, INDEX > 180 & INDEX <= 360) 
+if(save_bsmash_outputs==TRUE){
+  write.table(control_n_gbc_R, file=file.path(project,"CAB-NP/control_n_gbc_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+}
+
+save_bsmash_outputs=FALSE
 ```
 
 read brainsmash outputs
