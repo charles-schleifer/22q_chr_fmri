@@ -1236,7 +1236,7 @@ gbc_control_n_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/control
 gbc_control_n_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/control_n_gbc_R_permuted.csv"), indices=181:360)
 ```
 
-compare RSFA and NetHo via permutation
+compare case-control maps via permutation
 ```{r permCor}
 # function to compute correlation between two brain maps and compare to brainsmash null distribution
 # requires df for brain map1, and df and brainsmash output for map2
