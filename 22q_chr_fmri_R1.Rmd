@@ -795,7 +795,6 @@ if(save_outputs==TRUE){
 }
 ```
 
-
 plot group difference maps
 ```{r funcPlotMRI, message=FALSE, warning=FALSE, paged.print=FALSE}
 # function to take xifti atlas (with ROIs denoted by unique values) and return list of xifti matrix indices by brain structure for each ROI
@@ -982,49 +981,49 @@ control_n_gbc <- get_roi_means(combat_result=gbc_combat_napls, group="CONTROL-N"
 
 plot control means
 ```{r plotControl}
-save_outputs==TRUE
+save_outputs=TRUE
 
 # BSV
 pl_rsfa_control_22q <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_22q_rsfa, roi_col="INDEX", val_col="value")
-view_xifti_surface(pl_rsfa_control_22q, title="Control22q Mean BSV", cex.title=1.3, colors="magma")
+view_xifti_surface(pl_rsfa_control_22q, title="Control22q Mean BSV", cex.title=1.3, colors="viridis")
 if(save_outputs==TRUE){
-  view_xifti_surface(pl_rsfa_control_22q, colors="magma", fname=file.path(project,"figures/fmri_maps/control22q_bsv.png"),legend_embed=TRUE)
+  view_xifti_surface(pl_rsfa_control_22q, colors="viridis", fname=file.path(project,"figures/fmri_maps/control22q_bsv.png"),legend_embed=TRUE, title="Control22q Mean BSV", cex.title=2.5)
 }
 
 pl_rsfa_control_n <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_n_rsfa, roi_col="INDEX", val_col="value")
-view_xifti_surface(pl_rsfa_control_n, title="ControlCHR Mean BSV", cex.title=1.3, colors="magma")
+view_xifti_surface(pl_rsfa_control_n, title="ControlCHR Mean BSV", cex.title=1.3, colors="viridis")
 if(save_outputs==TRUE){
-  view_xifti_surface(pl_rsfa_control_n, colors="magma", fname=file.path(project,"figures/fmri_maps/controlCHR_bsv.png"),legend_embed=TRUE)
+  view_xifti_surface(pl_rsfa_control_n, colors="viridis", fname=file.path(project,"figures/fmri_maps/controlCHR_bsv.png"),legend_embed=TRUE, title="ControlCHR Mean BSV", cex.title=2.5)
 }
 
 # LC
 pl_netho_control_22q <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_22q_netho, roi_col="INDEX", val_col="value")
-view_xifti_surface(pl_netho_control_22q, title="Control22q Mean LC", cex.title=1.3, colors=pal_red_blue())
+view_xifti_surface(pl_netho_control_22q, title="Control22q Mean LC", cex.title=1.3, colors="viridis")
 if(save_outputs==TRUE){
-  view_xifti_surface(pl_netho_control_22q, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/control22q_lc.png"),legend_embed=TRUE)
+  view_xifti_surface(pl_netho_control_22q, colors="viridis", fname=file.path(project,"figures/fmri_maps/control22q_lc.png"),legend_embed=TRUE, title="Control22q Mean LC", cex.title=2.5)
 }
 
 
 pl_netho_control_n <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_n_netho, roi_col="INDEX", val_col="value")
-view_xifti_surface(pl_netho_control_n, title="ControlCHR Mean LC", cex.title=1.3, colors=pal_red_blue())
+view_xifti_surface(pl_netho_control_n, title="ControlCHR Mean LC", cex.title=1.3, colors="viridis")
 if(save_outputs==TRUE){
-  view_xifti_surface(pl_netho_control_n, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/controlCHR_lc.png"),legend_embed=TRUE)
+  view_xifti_surface(pl_netho_control_n, colors="viridis", fname=file.path(project,"figures/fmri_maps/controlCHR_lc.png"),legend_embed=TRUE, title="ControlCHR Mean LC", cex.title=2.5)
 }
 
 # GBC
 pl_gbc_control_22q <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_22q_gbc, roi_col="INDEX", val_col="value")
-view_xifti_surface(pl_gbc_control_22q, title="Control22q Mean GBC", cex.title=1.3, colors=pal_red_blue())
+view_xifti_surface(pl_gbc_control_22q, title="Control22q Mean GBC", cex.title=1.3, colors="viridis")
 if(save_outputs==TRUE){
-  view_xifti_surface(pl_gbc_control_22q, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/control22q_gbc.png"),legend_embed=TRUE)
+  view_xifti_surface(pl_gbc_control_22q, colors="viridis", fname=file.path(project,"figures/fmri_maps/control22q_gbc.png"),legend_embed=TRUE, title="Control22q Mean GBC", cex.title=2.5)
 }
 
 pl_gbc_control_n <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=control_n_gbc, roi_col="INDEX", val_col="value")
-view_xifti_surface(pl_gbc_control_n, title="ControlNAPLS Mean GBC", cex.title=1.3, colors=pal_red_blue())
+view_xifti_surface(pl_gbc_control_n, title="ControlCHR Mean GBC", cex.title=1.3, colors="viridis")
 if(save_outputs==TRUE){
-  view_xifti_surface(pl_gbc_control_n, colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/controlCHR_gbc.png"),legend_embed=TRUE)
+  view_xifti_surface(pl_gbc_control_n, colors="viridis", fname=file.path(project,"figures/fmri_maps/controlCHR_gbc.png"),legend_embed=TRUE, title="ControlCHR Mean GBC", cex.title=2.5)
 }
 
-save_outputs==FALSE
+save_outputs=FALSE
 ```
 
 write files for brainsmash null model generation
