@@ -1122,63 +1122,64 @@ if(save_bsmash_outputs==TRUE){
 save_bsmash_outputs=TRUE
 # write control means
 # 22q Control 
-control_22q_rsfa_L <- filter(control_22q_rsfa, INDEX <= 180)
+control_22q_rsfa_L <- filter(control_22q_rsfa, INDEX <= 180)[,"value"]
 if(save_bsmash_outputs==TRUE){
   write.table(control_22q_rsfa_L, file=file.path(project,"CAB-NP/control_22q_rsfa_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_22q_netho_L <- filter(control_22q_netho, INDEX <= 180)
+control_22q_netho_L <- filter(control_22q_netho, INDEX <= 180)[,"value"]
 if(save_bsmash_outputs==TRUE){
   write.table(control_22q_netho_L, file=file.path(project,"CAB-NP/control_22q_netho_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_22q_gbc_L <- filter(control_22q_gbc, INDEX <= 180) 
+control_22q_gbc_L <- filter(control_22q_gbc, INDEX <= 180)[,"value"] 
 if(save_bsmash_outputs==TRUE){
   write.table(control_22q_gbc_L, file=file.path(project,"CAB-NP/control_22q_gbc_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
 
 
-control_22q_rsfa_R <- filter(control_22q_rsfa, INDEX > 180 & INDEX <= 360) 
+control_22q_rsfa_R <- filter(control_22q_rsfa, INDEX > 180 & INDEX <= 360)[,"value"] 
 if(save_bsmash_outputs==TRUE){
   write.table(control_22q_rsfa_R, file=file.path(project,"CAB-NP/control_22q_rsfa_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_22q_netho_R <- filter(control_22q_netho, INDEX > 180 & INDEX <= 360)
+control_22q_netho_R <- filter(control_22q_netho, INDEX > 180 & INDEX <= 360)[,"value"]
 if(save_bsmash_outputs==TRUE){
   write.table(control_22q_netho_R, file=file.path(project,"CAB-NP/control_22q_netho_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_22q_gbc_R <- filter(control_22q_gbc, INDEX > 180 & INDEX <= 360) 
+control_22q_gbc_R <- filter(control_22q_gbc, INDEX > 180 & INDEX <= 360)[,"value"] 
 if(save_bsmash_outputs==TRUE){
   write.table(control_22q_gbc_R, file=file.path(project,"CAB-NP/control_22q_gbc_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
 
 
-control_n_rsfa_L <- filter(control_n_rsfa, INDEX <= 180) 
+control_n_rsfa_L <- filter(control_n_rsfa, INDEX <= 180)[,"value"] 
 if(save_bsmash_outputs==TRUE){
   write.table(control_n_rsfa_L, file=file.path(project,"CAB-NP/control_n_rsfa_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_n_netho_L <- filter(control_n_netho, INDEX <= 180) 
+control_n_netho_L <- filter(control_n_netho, INDEX <= 180)[,"value"] 
 if(save_bsmash_outputs==TRUE){
   write.table(control_n_netho_L, file=file.path(project,"CAB-NP/control_n_netho_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_n_gbc_L <- filter(control_n_gbc, INDEX <= 180) 
+control_n_gbc_L <- filter(control_n_gbc, INDEX <= 180)[,"value"] 
 if(save_bsmash_outputs==TRUE){
-  write.table(control_n_gbc_L, file=file.path(project,"CAB-NP/control_n_gbc_L"), quote=FALSE, col.names = FALSE, row.names = FALSE)
+  write.table(control_n_gbc_L, file=file.path(project,"CAB-NP/control_n_gbc_L.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
 
 
-control_n_rsfa_R <- filter(control_n_rsfa, INDEX > 180 & INDEX <= 360) 
+control_n_rsfa_R <- filter(control_n_rsfa, INDEX > 180 & INDEX <= 360)[,"value"] 
 if(save_bsmash_outputs==TRUE){
   write.table(control_n_rsfa_R, file=file.path(project,"CAB-NP/control_n_rsfa_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_n_netho_R <- filter(control_n_netho, INDEX > 180 & INDEX <= 360)
+control_n_netho_R <- filter(control_n_netho, INDEX > 180 & INDEX <= 360)[,"value"]
 if(save_bsmash_outputs==TRUE){
   write.table(control_n_netho_R, file=file.path(project,"CAB-NP/control_n_netho_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
-control_n_gbc_R <- filter(control_n_gbc, INDEX > 180 & INDEX <= 360) 
+control_n_gbc_R <- filter(control_n_gbc, INDEX > 180 & INDEX <= 360)[,"value"] 
 if(save_bsmash_outputs==TRUE){
   write.table(control_n_gbc_R, file=file.path(project,"CAB-NP/control_n_gbc_R.txt"), quote=FALSE, col.names = FALSE, row.names = FALSE)
 }
 
 save_bsmash_outputs=FALSE
 ```
+next step involves
 
 read brainsmash outputs
 ```{r readBsmash}
@@ -1218,6 +1219,21 @@ gbc_chr_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/CHR_TD_GBC_R_
 # view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_L, roi_col="INDEX", val_col="V100"), title="BrainSMASH, RSFA, L, 100", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V1000"), title="BrainSMASH, RSFA, R, 1000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
 # view_xifti_surface(atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_bsmash_R, roi_col="INDEX", val_col="V10000"), title="BrainSMASH, RSFA, R, 10000", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue())
+
+# read control means
+rsfa_control_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/control_22q_rsfa_L_permuted.csv"), indices=1:180)
+rsfa_control_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/control_22q_rsfa_R_permuted.csv"), indices=181:360)
+netho_control_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/control_22q_netho_L_permuted.csv"), indices=1:180)
+netho_control_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/control_22q_netho_R_permuted.csv"), indices=181:360)
+gbc_control_22q_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/control_22q_gbc_L_permuted.csv"), indices=1:180)
+gbc_control_22q_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/control_22q_gbc_R_permuted.csv"), indices=181:360)
+
+rsfa_control_n_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/control_n_rsfa_L_permuted.csv"), indices=1:180)
+rsfa_control_n_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/control_n_rsfa_R_permuted.csv"), indices=181:360)
+netho_control_n_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/control_n_netho_L_permuted.csv"), indices=1:180)
+netho_control_n_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/control_n_netho_R_permuted.csv"), indices=181:360)
+gbc_control_n_bsmash_L <- read_brainsmash(path=file.path(project,"CAB-NP/control_n_gbc_L_permuted.csv"), indices=1:180)
+gbc_control_n_bsmash_R <- read_brainsmash(path=file.path(project,"CAB-NP/control_n_gbc_R_permuted.csv"), indices=181:360)
 ```
 
 compare RSFA and NetHo via permutation
