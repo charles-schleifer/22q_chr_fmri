@@ -1914,7 +1914,7 @@ map_permute_cor <- function(map, variable, bsmash, bsmash_cols=paste0("V",1:1000
 #rsfa_ahba_abs95_nulls <- lapply(rsfa_ahba_abs95, function(g) ahba_permute_cor(variable=g,map=ahbaSurfCABNP_L, bsmash=rsfa_22q_bsmash_L, verbose=TRUE))
 ```
 
-correlate with neuromaps output
+correlate case-control with neuromaps LH output
 ```{r neuromapCor}
 # read data fromm Kuldeep
 neuromaps <- read.csv(file.path(project,"df_neuromaps_Glasser180.csv"), header=TRUE) %>% rename("GlasserRegion"="X")
@@ -2031,7 +2031,7 @@ netho_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=netho_chr_nmap_cor, neurom
 gbc_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=gbc_chr_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_chr_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
 ```
 
-plot neuromaps results
+plot case-control LH neuromaps results
 ```{r plotNeuromap22q}
 # create long dataframes to plot nulls
 rsfa_22q_nuls_long <- melt.data.table(as.data.table(rsfa_22q_nmap_p$nulls), id.vars="perm")
@@ -2097,7 +2097,7 @@ if(save_outputs==TRUE){
 }
 ```
 
-plot chr neuromaps
+plot chr LH neuromaps
 ```{r plotNeuromapCHR}
 # create long dataframes to plot nulls
 rsfa_chr_nuls_long <- melt.data.table(as.data.table(rsfa_chr_nmap_p$nulls), id.vars="perm")
@@ -2243,7 +2243,7 @@ if(save_outputs==TRUE){
 }
 ```
 
-neuromaps info table 
+neuromaps LH info table 
 ```{r neuromapTable, message=FALSE, warning=FALSE, paged.print=FALSE}
 nmap_table <- data.frame(Map=nmap_match$name)
 
@@ -2295,6 +2295,175 @@ if(save_outputs==TRUE){
 }
 ```
 
+Test control means LH neuromaps
+correlate case-control with neuromaps LH output
+```{r neuromapCorCtrl}
+
+# merge control means with key
+control_22q_gbc_k <- merge(x=control_22q_gbc, y=ji_key, all.x=TRUE, all.y=FALSE, by="INDEX")
+control_22q_netho_k <- merge(x=control_22q_netho, y=ji_key, all.x=TRUE, all.y=FALSE, by="INDEX")
+control_22q_rsfa_k <- merge(x=control_22q_rsfa, y=ji_key, all.x=TRUE, all.y=FALSE, by="INDEX")
+
+control_n_gbc_k <- merge(x=control_n_gbc, y=ji_key, all.x=TRUE, all.y=FALSE, by="INDEX")
+control_n_netho_k <- merge(x=control_n_netho, y=ji_key, all.x=TRUE, all.y=FALSE, by="INDEX")
+control_n_rsfa_k <- merge(x=control_n_rsfa, y=ji_key, all.x=TRUE, all.y=FALSE, by="INDEX")
+
+# merge with neuromap
+control_22q_gbc_nmap   <- cabnp_hcp_lh(cabnp_df=control_22q_gbc_k, hcp_df=neuromaps)
+control_22q_netho_nmap <- cabnp_hcp_lh(cabnp_df=control_22q_netho_k, hcp_df=neuromaps)
+control_22q_rsfa_nmap  <- cabnp_hcp_lh(cabnp_df=control_22q_rsfa_k, hcp_df=neuromaps)
+
+control_n_gbc_nmap    <- cabnp_hcp_lh(cabnp_df=control_n_gbc_k, hcp_df=neuromaps)
+control_n_netho_nmap  <- cabnp_hcp_lh(cabnp_df=control_n_netho_k, hcp_df=neuromaps)
+control_n_rsfa_nmap   <- cabnp_hcp_lh(cabnp_df=control_n_rsfa_k, hcp_df=neuromaps)
+
+# get correlations
+control_22q_gbc_nmap_cor   <- nmap_cor(map1=control_22q_gbc_nmap$value, map_all=control_22q_gbc_nmap, method="pearson", use="complete.obs")  
+control_22q_netho_nmap_cor <- nmap_cor(map1=control_22q_netho_nmap$value, map_all=control_22q_netho_nmap, method="pearson", use="complete.obs")  
+control_22q_rsfa_nmap_cor  <- nmap_cor(map1=control_22q_rsfa_nmap$value, map_all=control_22q_rsfa_nmap, method="pearson", use="complete.obs")  
+
+control_n_gbc_nmap_cor    <- nmap_cor(map1=control_n_gbc_nmap$value, map_all=control_n_gbc_nmap, method="pearson", use="complete.obs")      
+control_n_netho_nmap_cor  <- nmap_cor(map1=control_n_netho_nmap$value, map_all=control_n_netho_nmap, method="pearson", use="complete.obs")    
+control_n_rsfa_nmap_cor   <- nmap_cor(map1=control_n_rsfa_nmap$value, map_all=control_n_rsfa_nmap, method="pearson", use="complete.obs")    
+
+# get pvals
+control_22q_gbc_nmap_p <- perm_p_neuromaps(neuromap_outputs=control_22q_gbc_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_control_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+control_22q_netho_nmap_p <- perm_p_neuromaps(neuromap_outputs=control_22q_netho_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=netho_control_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+control_22q_rsfa_nmap_p <- perm_p_neuromaps(neuromap_outputs=control_22q_rsfa_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_control_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+control_n_gbc_nmap_p <- perm_p_neuromaps(neuromap_outputs=control_n_gbc_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_control_n_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+   
+control_n_netho_nmap_p  <- perm_p_neuromaps(neuromap_outputs=control_n_netho_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=netho_control_n_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+
+control_n_rsfa_nmap_p <- perm_p_neuromaps(neuromap_outputs=control_n_rsfa_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_control_n_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)  
+
+```
+
+plot control LH neuromaps results
+```{r plotNeuromap22q}
+# create long dataframes to plot nulls
+control_22q_gbc_nulls_long <- melt.data.table(as.data.table(control_22q_gbc_nmap_p$nulls), id.vars="perm")
+control_22q_gbc_nulls_long$variable <- factor(control_22q_gbc_nulls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+control_22q_netho_nulls_long <- melt.data.table(as.data.table(control_22q_netho_nmap_p$nulls), id.vars="perm")
+control_22q_netho_nulls_long$variable <- factor(control_22q_netho_nulls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+control_22q_rsfa_nulls_long <- melt.data.table(as.data.table(control_22q_rsfa_nmap_p$nulls), id.vars="perm")
+control_22q_rsfa_nulls_long$variable <- factor(control_22q_rsfa_nulls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+control_n_gbc_nulls_long <- melt.data.table(as.data.table(control_n_gbc_nmap_p$nulls), id.vars="perm")
+control_n_gbc_nulls_long$variable <- factor(control_n_gbc_nulls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+control_n_netho_nulls_long <- melt.data.table(as.data.table(control_n_netho_nmap_p$nulls), id.vars="perm")
+control_n_netho_nulls_long$variable <- factor(control_n_netho_nulls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+control_n_rsfa_nulls_long <- melt.data.table(as.data.table(control_n_rsfa_nmap_p$nulls), id.vars="perm")
+control_n_rsfa_nulls_long$variable <- factor(control_n_rsfa_nulls_long$variable,levels=nmap_match$variable,ordered=TRUE)
+
+
+# plot
+ctrl_22q_gbc_box <- ggplot(data=control_22q_gbc_nulls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
+  geom_point(data=control_22q_gbc_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #ylab("")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Global Connectivity Control22q")
+  #theme(legend.position="none")
+
+ctrl_22q_netho_box <- ggplot(data=control_22q_netho_nulls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
+  geom_point(data=control_22q_netho_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Local Connectivity Control22q")
+
+ctrl_22q_rsfa_box <- ggplot(data=control_22q_rsfa_nulls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
+  geom_point(data=control_22q_rsfa_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #ylab("")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Brain Signal Variability Control22q")+
+  #theme(plot.margin = unit(c(0,0,0,0.7),"in"))+
+  scale_x_discrete(labels=nmap_match$name)
+
+
+ctrl_n_gbc_box <- ggplot(data=control_n_gbc_nulls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
+  geom_point(data=control_n_gbc_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #ylab("")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Global Connectivity ControlCHR")+
+  theme(legend.position="none")
+
+ctrl_n_netho_box <- ggplot(data=control_n_netho_nulls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
+  geom_point(data=control_n_netho_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  #theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #xlab("Brain Map Comparison")+
+  xlab("")+
+  ggtitle("Local Connectivity ControlCHR")
+
+ctrl_n_rsfa_box <- ggplot(data=control_n_rsfa_nulls_long, aes(y=value, x=variable))+
+  geom_boxplot(outlier.shape=21, color="grey50", alpha=0.5)+
+  geom_point(data=control_n_rsfa_nmap_p$pvals,aes(x=map, y=cor, color=p < 0.05, shape=p < 0.05), size=3)+
+  scale_color_manual(values = c("tan","red"))+
+  scale_shape_manual(values=c(18,16))+
+  theme_classic(base_size = 15)+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  #theme(axis.text.x = element_blank())+
+  ylab("Pearson's r")+
+  #ylab("")+
+  xlab("Brain Map Comparison")+
+  #xlab("")+
+  ggtitle("Brain Signal Variability ControlCHR")+
+  theme(plot.margin = unit(c(0,0,0,0.7),"in"))+
+  scale_x_discrete(labels=nmap_match$name)+
+  theme(legend.position="none")
+
+#neuromaps_control_n_bplots <- ctrl_n_gbc_box/ctrl_n_netho_box/ctrl_n_rsfa_box+plot_layout(guides = "collect")
+#neuromaps_control_22q_bplots <- ctrl_22q_gbc_box/ctrl_22q_netho_box/ctrl_22q_rsfa_box+plot_layout(guides = "collect")
+neuromaps_control_bplots <- ctrl_22q_gbc_box/ctrl_n_gbc_box/ctrl_22q_netho_box/ctrl_n_netho_box/ctrl_22q_rsfa_box/ctrl_n_rsfa_box+plot_layout(guides = "collect")
+#neuromaps_control_bplots <- ggarrange(neuromaps_control_22q_bplots, neuromaps_control_n_bplots, nrow=1)
+
+if(save_outputs==TRUE){
+  ggsave(neuromaps_control_bplots, file=file.path(project,"figures/neuromaps/neuromaps_control_correlations.pdf"), device = "pdf", height = 12, width = 10)
+  ggsave(neuromaps_control_bplots, file=file.path(project,"figures/neuromaps/neuromaps_control_correlations.png"), device = "png", height = 12, width = 10)
+}
+```
 
 ## Supplemental analyses
 collect main effect of site from models
