@@ -2465,6 +2465,126 @@ if(save_outputs==TRUE){
 }
 ```
 
+RH case-control neuromaps
+```{r neuromapCor}
+# read data fromm Kuldeep
+neuromaps_LR <- read.csv(file.path(project,"df_neuromaps_Glasser_lhrh_360_version2.csv"), header=TRUE) %>% rename("GlasserRegion"="X")
+neuromaps_R <- neuromaps_LR[181:360,]
+
+#nmap_cols <- names(neuromaps)[which(names(neuromaps) !="GlasserRegion")]
+# 
+# # get PVALB-SST column in AHBA
+# ahbaSurfPVSST_L <- ahbaSurfCABNP_L
+# ahbaSurfPVSST_L$PVALB_SST <- ahbaSurfPVSST_L$PVALB - ahbaSurfPVSST_L$SST
+# 
+# # add size of ROIs
+# roi_sizes_L <- xii_Ji_parcel$data$cortex_left %>% table %>% as.data.frame
+# colnames(roi_sizes_L) <- c("INDEX","ROI_size")
+# 
+# # update nmap_cols
+# nmap_cols <- c(nmap_cols,"PVALB_SST","ROI_size")
+# 
+# # function to merge CAB-NP results with HCP parcel names
+# cabnp_hcp_lh <- function(hcp_df, colname="GlasserRegion", cabnp_df, ahba_df=ahbaSurfPVSST_L, ahba_cols="PVALB_SST", sizes=roi_sizes_L){
+#   lh <- filter(cabnp_df, INDEX %in% 1:180)
+#   lh$GLASSERLABELNAME
+#   lh[,colname] <- lh$GLASSERLABELNAME %>% gsub("^L_","",.) %>% gsub("_ROI","",.)
+#   out <- merge(x=lh, y=hcp_df, by=colname)
+#   out <- merge(x=out, y=sizes, by="INDEX")
+#   if(!is.null(ahba_df)){
+#     ahba_merge <- ahba_df[,c("INDEX",ahba_cols)]
+#     out <- merge(x=out, y=ahba_merge, by="INDEX")
+#   }
+#   return(out)
+# }
+# 
+# # merge with neuromap
+# rsfa_22q_nmap <- cabnp_hcp_lh(cabnp_df=rsfa_22q_lms, hcp_df=neuromaps)
+# netho_22q_nmap <- cabnp_hcp_lh(cabnp_df=netho_22q_lms, hcp_df=neuromaps)
+# gbc_22q_nmap <- cabnp_hcp_lh(cabnp_df=gbc_22q_lms, hcp_df=neuromaps)
+# 
+# rsfa_chr_nmap <- cabnp_hcp_lh(cabnp_df=rsfa_chr_lms, hcp_df=neuromaps)
+# netho_chr_nmap <- cabnp_hcp_lh(cabnp_df=netho_chr_lms, hcp_df=neuromaps)
+# gbc_chr_nmap <- cabnp_hcp_lh(cabnp_df=gbc_chr_lms, hcp_df=neuromaps)
+# 
+# # get neuromap df without fMRI result
+# neuromaps_ordered <- subset(data.table(rsfa_22q_nmap), select=-c(group_beta, group_FDR_q, group_FDR_sig, group_beta_FDR, group_se, group_t, group_p))
+# 
+# # correlate with nmap columns
+# nmap_cor <- function(map1, map_all, method="pearson", use="complete.obs", cols=nmap_cols){
+#   cor <- lapply(cols, function(c) cor_brain_maps(map1=map1, map2=map_all[,c], method=method, use=use)) %>% as.numeric
+#   out <- data.frame(map=cols, cor=cor)
+#   out$cor %<>% as.numeric
+#   out <- out[order(out$cor),]
+#   return(out)
+# }
+# 
+# rsfa_22q_nmap_cor <- nmap_cor(map1=rsfa_22q_nmap$group_beta, map_all=rsfa_22q_nmap, method="pearson", use="complete.obs")
+# netho_22q_nmap_cor <- nmap_cor(map1=netho_22q_nmap$group_beta, map_all=netho_22q_nmap, method="pearson", use="complete.obs")
+# gbc_22q_nmap_cor <- nmap_cor(map1=gbc_22q_nmap$group_beta, map_all=gbc_22q_nmap, method="pearson", use="complete.obs")
+# 
+# rsfa_chr_nmap_cor <- nmap_cor(map1=rsfa_chr_nmap$group_beta, map_all=rsfa_chr_nmap, method="pearson", use="complete.obs")
+# netho_chr_nmap_cor <- nmap_cor(map1=netho_chr_nmap$group_beta, map_all=netho_chr_nmap, method="pearson", use="complete.obs")
+# gbc_chr_nmap_cor <- nmap_cor(map1=gbc_chr_nmap$group_beta, map_all=gbc_chr_nmap, method="pearson", use="complete.obs")
+# 
+# # plot
+# # pl_cmruglu <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_nmap, roi_col="INDEX", val_col="cmruglu")
+# # view_xifti_surface(pl_cmruglu, title="Glucose Metabolism", cex.title=1.3, colors="magma",hemisphere="left")
+# # pl_rsfa_22q_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=rsfa_22q_lms, roi_col="INDEX", val_col="beta")
+# # view_xifti_surface(pl_rsfa_22q_b, title="Signal Variablity: 22qDel vs TD", cex.title=1.3,zlim=c(-0.8,0.8), colors=pal_red_blue(),hemisphere="left")
+# 
+# # bsmash permutations for neuromaps
+# #rsfa_22q_nmap_nulls <- map_permute_cor(map=neuromaps_ordered, variable="cmruglu", bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000))
+# 
+# # test perm p for one measure
+# #perm_p(test_stat=rsfa_22q_nmap_cor[1,2], nulls=rsfa_22q_nmap_nulls, alternative="two.sided")
+# 
+# # function to compute nulls and perm-p for each neuromaps measure
+# # outputs list object containing neuromaps outputs with p-vals added, and a data frame with a column for each null and row for each measure
+# perm_p_neuromaps <- function(neuromap_outputs, order=nmap_match$variable, neuromap_df=neuromaps_ordered, bsmash, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE){
+#   maps <- neuromap_outputs$map
+#   nmap_out <- neuromap_outputs
+#   nmap_out$p <- NA
+#   null_df <- NULL
+#   for(m in maps){
+#     # get true correlation
+#     cor <- filter(neuromap_outputs, map==m)$cor
+#     # get nulls
+#     nulls <- map_permute_cor(map=neuromap_df, variable=m, bsmash=bsmash, bsmash_cols=bsmash_cols)
+#     # get p-val
+#     p <- perm_p(test_stat=cor, nulls=nulls, alternative=alternative)
+#     # record outputs
+#     nmap_out[which(nmap_out$map==m),"p"] <- p
+#     null_df <- cbind(null_df,nulls)
+#   }
+#   null_df %<>% as.data.frame
+#   colnames(null_df) <- maps
+#   null_df$perm <- 1:nrow(null_df)
+#   nmap_out %<>% as.data.frame
+#   nmap_out[match(order, nmap_out$map),]
+#   out <- list(pvals=as.data.frame(nmap_out), nulls=null_df)
+#   return(out)
+# }
+# 
+# # neuromaps permuted p-vals
+# nmap_match <- data.frame(variable=c("cmruglu", "cmr02", "CBF", "cbv", "PC1.AHBA", "PVALB_SST", "G1.fMRI", "intersubjvar", "PC1.Neurosynth", "scalingpnc", "scalingnih", "devexp", "Evolution.Expansion", "Cortical.Thickness", "T1T2ratio", "meg_delta", "meg_theta", "meg_alpha", "meg_beta", "meg_gamma1", "meg_gamma2","ROI_size"), name=c("Glucose metabolism", "Oxygen metabolism", "Cerebral blood flow", "Cerebral blood volume", "PC1 gene expression", "PVALB-SST gradient","fMRI gradient", "Intersubject variability", "PC1 neurosynth", "Allometric scaling (PNC)", "Allometric scaling (NIH)", "Developmental expansion", "Evolutionary expansion", "Cortical thickness", "T1w/T2w ratio", "MEG delta", "MEG theta", "MEG alpha", "MEG beta", "MEG gamma1", "MEG gamma2","ROI size"))
+# #nmap_order <- c("cmruglu","cmr02","CBF","cbv","G1.fMRI","intersubjvar","PC1.AHBA","PC1.Neurosynth","scalingpnc","scalingnih","devexp","Evolution.Expansion","Cortical.Thickness","T1T2ratio","meg_delta","meg_theta","meg_alpha","meg_beta","meg_gamma1","meg_gamma2")
+# # 22q
+# rsfa_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+# 
+# netho_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=netho_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=netho_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+# 
+# gbc_22q_nmap_p <- perm_p_neuromaps(neuromap_outputs=gbc_22q_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_22q_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+# 
+# # chr
+# rsfa_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=rsfa_chr_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=rsfa_chr_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+# 
+# netho_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=netho_chr_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=netho_chr_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+# 
+# gbc_chr_nmap_p <- perm_p_neuromaps(neuromap_outputs=gbc_chr_nmap_cor, neuromap_df=neuromaps_ordered, bsmash=gbc_chr_bsmash_L, bsmash_cols=paste0("V",1:10000), alternative="two.sided", verbose=FALSE)
+```
+
+
 ## Supplemental analyses
 collect main effect of site from models
 ```{r supSite, paged.print=FALSE}
