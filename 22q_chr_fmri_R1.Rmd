@@ -65,7 +65,7 @@ save_outputs=FALSE
 # load Rdata instead of loading individual files
 # load(file.path(project,"demographics/22q_chr_fmri_init.Rdata"))
 # load(file.path(project,"git_exclude/22q_chr_fmri_main.Rdata"))
-# load(file.path(project,"git_exclude/22q_chr_fmri_full.Rdata"))
+# load(file.path(project,"git_exclude/22q_chr_fmri_full_R1.Rdata"))
 ```
 
 get subject IDs and load demographic data
@@ -2401,10 +2401,16 @@ psych_22q_gbc_mods <-lapply(psych_22q_gbc_sig$indexcol, function(i) summary(lm_p
 
 # plot
 pl_gbc_22q_psych_fdrb <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_psych, roi_col="INDEX", val_col="group_beta_FDR")
-view_xifti_surface(pl_gbc_22q_psych_fdrb, title="Global Connectivity: 22qDel PS+ vs PS- (FDR q<0.05)", cex.title=1.3,zlim=c(-1.1,1.1), colors=pal_red_blue())
+view_xifti_surface(pl_gbc_22q_psych_fdrb, title="Global Connectivity: 22qDel PS+ vs PS- (FDR q<0.05)", cex.title=1.3,zlim=c(-1.3,1.3), colors=pal_red_blue())
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_gbc_22q_psych_fdrb,zlim=c(-1.3,1.3), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22qPS_b_fdr.png"),legend_embed=TRUE)
+}
 
 pl_gbc_22q_psych_b <- atlas_xifti_new_vals(xii=xii_Ji_parcel, df=gbc_22q_psych, roi_col="INDEX", val_col="group_beta")
-view_xifti_surface(pl_gbc_22q_psych_b, title="Global Connectivity: 22qDel PS+ vs PS- ", cex.title=1.3,zlim=c(-1.1,1.1), colors=pal_red_blue())
+view_xifti_surface(pl_gbc_22q_psych_b, title="Global Connectivity: 22qDel PS+ vs PS- ", cex.title=1.3,zlim=c(-1.3,1.3), colors=pal_red_blue())
+if(save_outputs==TRUE){
+  view_xifti_surface(pl_gbc_22q_psych_b,zlim=c(-1.3,1.3), colors=pal_red_blue(), fname=file.path(project,"figures/fmri_maps/gbc_22qPS_b.png"),legend_embed=TRUE)
+}
 ```
 
 lm of IQ in each group
@@ -2506,6 +2512,7 @@ filter(add_demo_cols(list=rsfa_wide, demo=demo_napls_all, democols="IQ_full")$df
 print("ControlCHR IQ subject counts:")
 filter(add_demo_cols(list=rsfa_wide, demo=demo_napls_all, democols="IQ_full")$df, Group=="CONTROL-N" & !is.na(IQ_full))$IQ_full %>% length
 ```
+
 get SIPS/PANSS subthreshold PS group in 22qDel
 ```{r supSIPS}
 # read UCLA SIPS
