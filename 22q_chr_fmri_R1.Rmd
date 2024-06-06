@@ -1178,7 +1178,8 @@ if(save_bsmash_outputs==TRUE){
 
 
 ```
-next step involves
+
+next step involves creating brainsmash permutations using python script in same repo, then read those results back into R and continue
 
 read brainsmash outputs
 ```{r readBsmash}
@@ -1284,7 +1285,8 @@ plot_cor_nulls <- function(test_stat, nulls, alternative="two.sided",ylab="",tit
   ggplot(data=data.frame(nulls=nulls), aes(x=nulls))+
     geom_histogram(bins=40,fill="slategrey", alpha=0.7)+
     geom_vline(xintercept=test_stat, color="red", linewidth=1, lty="solid")+
-    geom_label_repel(data=data.frame(xval=test_stat, text=paste("p =",round(p, digits=7))), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
+    #geom_label_repel(data=data.frame(xval=test_stat, text=paste("p =",round(p, digits=7))), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
+    geom_label_repel(data=data.frame(xval=test_stat, text=paste("p =",p)), aes(x=xval, y=0, label=text), min.segment.length = 0, nudge_y=100, nudge_x=-0.05)+
     xlab(xlab)+
     ylab(ylab)+
     ggtitle(title)+
@@ -1479,9 +1481,9 @@ if(save_outputs==TRUE){
 }
 
 # plot distributions for two significant pairs
-cor_nulls1 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q LC" & maps_all_df$Var2 == "22q BSV")]]$nulls, xlab="Pearson's r", title="22qDel LC vs. 22qDel BSV")
+cor_nulls1 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q BSV" & maps_all_df$Var2 == "22q LC")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q BSV" & maps_all_df$Var2 == "22q LC")]]$nulls, xlab="Pearson's r", title="22qDel LC vs. 22qDel BSV")
 
-cor_nulls2 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "22q GBC" & maps_all_df$Var2 == "CHR LC")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "22q GBC" & maps_all_df$Var2 == "CHR LC")]]$nulls, xlab="Pearson's r", title="22qDel GBC vs. CHR LC")
+cor_nulls2 <- plot_cor_nulls(test_stat=cor_stats[[which(maps_all_df$Var1 == "CHR LC" & maps_all_df$Var2 == "22q GBC")]]$true_correlation, nulls=cor_stats[[which(maps_all_df$Var1 == "CHR LC" & maps_all_df$Var2 == "22q GBC")]]$nulls, xlab="Pearson's r", title="22qDel GBC vs. CHR LC", alternative = "two.sided")
 
 cor_nulls_all <- cor_nulls1+cor_nulls2+ 
   plot_annotation(title = 'Null distributions for significant comparisons',theme=theme(plot.title=element_text(size=16,hjust=0.5)))
@@ -1489,6 +1491,7 @@ cor_nulls_all
 if(save_outputs==TRUE){
   ggsave(plot=cor_nulls_all, filename = file.path(project,"figures/fmri_maps/correlations_null_dist.pdf"), device="pdf", width=7, height=4)
 }
+ 
 
 # plot_cor_nulls(test_stat=netho_rsfa_22q_cor_R$true_correlation, nulls=netho_rsfa_22q_cor_R$nulls, xlab="Pearson r", title="NetHo vs RSFA, RH")
 # #plot_cor_nulls(rsfa_netho_22q_cor_L, title="RSFA vs NetHo, LH, n=10,000")
@@ -2093,6 +2096,7 @@ if(save_outputs==TRUE){
   ggsave(neuromaps_22q_bplots, file=file.path(project,"figures/neuromaps/neuromaps_22q_correlations.pdf"), device = "pdf", height = 8, width = 9)
 }
 ```
+
 plot chr neuromaps
 ```{r plotNeuromapCHR}
 # create long dataframes to plot nulls
