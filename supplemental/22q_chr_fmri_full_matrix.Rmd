@@ -166,14 +166,6 @@ demo_22q_napls <- rbind(demo_22q, demo_napls)
 demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
 ```
 
-add converter label for NAPLS2
-```{r convertLabel}
-converters <- read_xlsx(file.path(project,"demographics/NAPLS/converters.xlsx"))
-convert_ids <- merge(x=converters, y=napls_id_match, by=c("SiteNumber","SubjectNumber"))
-demo_22q_napls$GroupConvert <- as.character(demo_22q_napls$Group)
-demo_22q_napls[which(demo_22q_napls$MRI_S_ID %in% convert_ids$MRI_S_ID),"GroupConvert"] <- "CHRc"
-demo_22q_napls$GroupConvert %<>% as.factor
-```
 
 load movement data
 ```{r loadMovement}
@@ -216,78 +208,15 @@ percent_udvarsme_rome <- lapply(rome_sessions,function(s) get_percent_udvarsme(s
 percent_udvarsme_suny <- lapply(suny_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=suny_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
 # get iop movement
 percent_udvarsme_iop <- lapply(iop_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=iop_dir,bold_name_use="resting")) %>% do.call(rbind,.) %>% as.data.frame
-# get NAPLS movement
-percent_udvarsme_napls <- lapply(napls_sessions,function(s) get_percent_udvarsme(sesh=s,sessions_dir=napls_dir,bold_name_use="RESTING")) %>% do.call(rbind,.) %>% as.data.frame
 
 # combine
-percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop, percent_udvarsme_napls)
+percent_udvarsme_all <- rbind(percent_udvarsme_trio,percent_udvarsme_prisma,percent_udvarsme_rome,percent_udvarsme_suny,percent_udvarsme_iop)
 percent_udvarsme_all$percent_udvarsme <- as.numeric(percent_udvarsme_all$percent_udvarsme)
 percent_udvarsme_all$percent_use <- as.numeric(percent_udvarsme_all$percent_use)
 percent_udvarsme_all$MRI_S_ID <- percent_udvarsme_all$sesh
 
 # add movement to demo bl
 demo_multisite_bl <- merge(x=demo_multisite_bl, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
-demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
-```
-
-demo table
-```{r demoTable}
-demo_22q_napls_all <- demo_22q_napls
-
-demo_multisite_bl$Group <- factor(demo_multisite_bl$SUBJECT_IDENTITY,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
-demo_multisite_bl$SEX <- factor(demo_multisite_bl$SEX, levels=c("M","F"))
-demo_multisite_bl$cardiac <- factor(demo_multisite_bl$cardiac, levels=c("N","Y"))
-
-#demo_22q_all <- filter(demo_22q_napls_all, Group %in% c("22qDel", "CONTROL")) %>% droplevels
-demo_napls_all <- filter(demo_22q_napls_all, Group %in% c("CHR", "CONTROL-N")) %>% droplevels
-demo_napls_all$conversion <- "N"
-demo_napls_all[which(demo_napls_all$MRI_S_ID %in% convert_ids$MRI_S_ID), "conversion"] <- "Y"
-demo_napls_all$conversion %<>% as.factor
-
-# napls IQ
-napls_neuro <- read_xlsx(file.path(project,"demographics/NAPLS_Neuro_30Jan2018.xlsx"),trim_ws=T, na=c("","NA"), col_names=T)
-napls_neuro1 <- napls_neuro[,c("SiteNumber", "SubjectNumber","VisitLabel","wasiiq")] %>% rename("IQ_full"="wasiiq")
-napls_neuro_id <- merge(x=napls_neuro1, y=napls_id_match, by=c("SiteNumber","SubjectNumber"))
-demo_napls_all <- merge(x=demo_napls_all, y=napls_neuro_id, by="MRI_S_ID")
-
-# napls meds
-napls_meds <- read_xlsx(file.path(project,"demographics/NAPLS2MedsExtraction060616SOPSdatesV1toV7FINALSUMMARY.xlsx"),trim_ws=T, na=c("","NA","#NULL!"), col_names=T)
-napls_meds_use <- napls_meds[,c("SiteNumber","SubjectNumber","Index1_current_AP")]
-napls_meds_use$Med_Antipsychotic <- factor(napls_meds_use$Index1_current_AP, levels=c(0,1,99), labels=c("N","Y","N"))
-demo_napls_all <- merge(x=demo_napls_all, y=napls_meds_use, by=c("SiteNumber","SubjectNumber"))
-
-demo_table_22q <- CreateTableOne(data=demo_multisite_bl, strata="Group", vars=c("AGE","SEX","percent_udvarsme","Med_Antipsychotic","psych_dx", "IQ_full", "cardiac"))
-demo_table_22q
-
-demo_table_napls <- CreateTableOne(data=demo_napls_all, strata="Group", vars=c("AGE","SEX","percent_udvarsme","Med_Antipsychotic","conversion","IQ_full"))
-demo_table_napls
-
-# print tables
-demo_table_22q_f <- print(demo_table_22q, showAllLevels = F, test=T,quote=F, contDigits=1)
-demo_table_n_f <- print(demo_table_napls, showAllLevels = F, test=T,quote=F, contDigits=1)
-demo_table_n_f <- rbind(demo_table_n_f,"-")
-demo_table_all <- cbind(demo_table_22q_f[,c("22qDel","CONTROL","p")],demo_table_n_f[,c("CHR","CONTROL-N","p")])
-colnames(demo_table_all) <- c("22qDel","Control22q","p-val-22q","CHR","ControlCHR","p-val-CHR")
-rownames(demo_table_all) <- c("n",
-                              "Age, Years, Mean (SD)",
-                              "Sex, Female, n (%)",
-                              "fMRI movement, Mean (SD)",
-                              "Antipsychotic med, n (%)",
-                              "Psychosis diagnosis, n (%)",
-                              "Full Scale IQ, Mean (SD)",
-                              "Congenital cardiac diagnosis, n (%)")
-demo_table_all %<>% as.data.frame
-
-# use gt() to make table for export
-# instructions for bolding specific headers https://gt.rstudio.com/reference/tab_style.html
-demo_table_out <- demo_table_all %>% gt(rownames_to_stub=TRUE) %>% 
-  tab_style(style = cell_text(weight = "bold"),locations = list(cells_stub(), cells_column_labels())) %>%
-  cols_align(align="right", columns=everything())
-
-if(save_outputs==TRUE){
-  gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.png"))
-  gtsave(demo_table_out, filename = file.path(project,"figures/demographics/table1.docx"))
-}
 ```
 
 load fMRI data
@@ -305,48 +234,14 @@ read_csv_results <- function(sdir, fname, sesh, site){
 }
 
 ## file name to look for
-# RSFA
-rsfa_name <- "resting_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
-rsfa_name_prisma <- "restingAP_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
-rsfa_name_napls <- "RESTING_parcellated_voxel_RSFA_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
-
-# local connectivity
-netho_name <- "resting_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
-netho_name_prisma <- "restingAP_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
-netho_name_napls <- "RESTING_ParcelNetHo_Atlas_s_hpss_res-mVWM1d_lpss_whole_brain_CABNP.csv"
-
 # between parcel connectivity
 bparc_name <- "resting_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
 bparc_name_prisma <- "restingAP_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
 bparc_name_napls <- "RESTING_fc_matrix_Atlas_s_hpss_res-mVWM1d_lpss_CABNP_between_parcel.csv"
 
-# read rsfa
-trio_rsfa <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=rsfa_name)) %>% do.call(rbind,.)
-prisma_rsfa <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=rsfa_name_prisma)) %>% do.call(rbind,.)
-suny_rsfa <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=rsfa_name)) %>% do.call(rbind,.)
-rome_rsfa <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=rsfa_name)) %>% do.call(rbind,.)
-iop_rsfa <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=rsfa_name)) %>% do.call(rbind,.)
-napls_rsfa <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=rsfa_name_napls)) %>% do.call(rbind,.)
-
-rsfa_all <- rbind(trio_rsfa,prisma_rsfa,suny_rsfa,rome_rsfa,iop_rsfa,napls_rsfa)
-rsfa_all$INDEX %<>% as.numeric
-rsfa_all$t_sd %<>% as.numeric
-rsfa_all$t_mean %<>% as.numeric
-
-# read local connectivity
-trio_netho <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=netho_name)) %>% do.call(rbind,.)
-prisma_netho <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=netho_name_prisma)) %>% do.call(rbind,.)
-suny_netho <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=netho_name)) %>% do.call(rbind,.)
-rome_netho <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=netho_name)) %>% do.call(rbind,.)
-iop_netho <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=netho_name)) %>% do.call(rbind,.)
-napls_netho <- lapply(napls_sessions, function(s) read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=netho_name_napls)) %>% do.call(rbind,.)
-
-netho_all <- rbind(trio_netho,prisma_netho,suny_netho,rome_netho,iop_netho,napls_netho)
-netho_all$INDEX %<>% as.numeric
-netho_all$NetHo %<>% as.numeric
 
 # function to convert parcellated fc matrix to global fc by getting the average connectivity for each ROI
-gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r_Fz", rois=1:360, key=ji_key){
+cortex_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r_Fz", rois=1:360, key=ji_key){
   # deprecated line below getting unique rois in favor of choosing rois in function input for more flexibility, with default rois 1:360 (e.g. cortex)
   #rois <- unique(c(mat[,col1],mat[,col2]))
   # make df to filter (rename chosen columns to "col1" and "col2" to easily reference in filter command)
@@ -355,91 +250,41 @@ gbc_from_matrix <- function(mat, col1="roi_1", col2="roi_2", variable="pearson_r
   dat$col2 <- dat[,col2]
   dat[,variable] %<>% as.numeric
   # filter for only specified rois (default only cortex)
-  dat_use <- filter(dat, col1 %in% rois & col2 %in% rois)[,c("MRI_S_ID","site","col1","col2",variable)]
-  # get subject ID and site
-  id <- unique(dat_use$MRI_S_ID)
-  site <- unique(dat_use$site)
-  if(length(id)>1){
-    stop("Error: more than one MRI ID in input data")
-  }
-  # make output df with one row per roi
-  out <- data.frame(INDEX=rois)
-  # get mean fc for each roi
-  for(r in rois){
-    rows <- filter(dat_use, col1==r | col2==r)
-    gbc <- mean(rows[,variable]) 
-    out[which(out$INDEX==r),"GBC"] <- gbc
-  }
-  out <- merge(x=out, y=key, by="INDEX", all.y=TRUE)
-  out$MRI_S_ID <- id
-  out$site <- site
+  out <- filter(dat, col1 %in% rois & col2 %in% rois)[,c("MRI_S_ID","site","col1","col2",variable)]
+  # # get subject ID and site
+  # id <- unique(dat_use$MRI_S_ID)
+  # site <- unique(dat_use$site)
+  # if(length(id)>1){
+  #   stop("Error: more than one MRI ID in input data")
+  # }
+  # out <- merge(x=out, y=key, by="INDEX", all.y=TRUE)
+  # out$MRI_S_ID <- id
+  # out$site <- site
   return(out)
 }
 
 # read between parcel fc CORTEX
-trio_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=bparc_name))) %>% do.call(rbind,.)
+trio_cmat <- lapply(filter(demo_multisite_bl, Site=="UCLAtrio")$MRI_S_ID, function(s) cortex_from_matrix(mat=read_csv_results(sesh=s,site="UCLAtrio",sdir=trio_dir,fname=bparc_name))) %>% do.call(rbind,.)
 
-prisma_gbc <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=bparc_name_prisma))) %>% do.call(rbind,.)
+prisma_cmat <- lapply(filter(demo_multisite_bl, Site=="UCLAprisma")$MRI_S_ID, function(s) cortex_from_matrix(mat=read_csv_results(sesh=s,site="UCLAprisma",sdir=prisma_dir,fname=bparc_name_prisma))) %>% do.call(rbind,.)
 
-suny_gbc <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=bparc_name))) %>% do.call(rbind,.)
+suny_cmat <- lapply(filter(demo_multisite_bl, Site=="SUNY")$MRI_S_ID, function(s) cortex_from_matrix(mat=read_csv_results(sesh=s,site="SUNY",sdir=suny_dir,fname=bparc_name))) %>% do.call(rbind,.)
 
-rome_gbc <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=bparc_name))) %>% do.call(rbind,.)
+rome_cmat <- lapply(filter(demo_multisite_bl, Site=="Rome")$MRI_S_ID, function(s) cortex_from_matrix(mat=read_csv_results(sesh=s,site="Rome",sdir=rome_dir,fname=bparc_name))) %>% do.call(rbind,.)
 
-iop_gbc <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=bparc_name))) %>% do.call(rbind,.)
+iop_cmat <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) cortex_from_matrix(mat=read_csv_results(sesh=s,site="IoP",sdir=iop_dir,fname=bparc_name))) %>% do.call(rbind,.)
 
-napls_gbc <- lapply(napls_sessions, function(s) gbc_from_matrix(mat=read_csv_results(sesh=s,site="NAPLS2",sdir=napls_dir,fname=bparc_name_napls))) %>% do.call(rbind,.)
-
-gbc_all <- rbind(trio_gbc,prisma_gbc,suny_gbc,rome_gbc,iop_gbc,napls_gbc)
-gbc_all$INDEX %<>% as.numeric
-gbc_all$GBC %<>% as.numeric
+cmat_all <- rbind(trio_cmat,prisma_cmat,suny_cmat,rome_cmat,iop_cmat)
+# cmat_all$INDEX %<>% as.numeric
+cmat_all$pearson_r_Fz %<>% as.numeric
 ```
 
-Notes on NAPLS QC: 
-multiple things to fix in input data
-NetHo data initially had NAs as well as inf values
-- NA in all "Frontoparietal-29_R-Cerebellum" and "Visual1-04_R-Accumbens" --> check size?
-- several subjects have multiple NA (those excluded for short BOLDs marked with *):
-  - 02_S0077_00 (700) *
-  - 08_S0081_00 (362) *
-  - 01_S0074_00 (166) *
-  - 08_S0057_00 (11) *
-  - 02_S0013_00 (5) - structural QC looks OK
-  - 03_S0122_00 (5) - structural QC missing regions including parts of temporal lobe
-- several subjects have infinite NetHo values for multiple parcels, and all overlap with cases with multiple NAs
-  - 01_S0074_00 (157) *
-  - 02_S0077_00 (11) *
-  - 08_S0057_00 (141) *
-  - 08_S0081_00 (130) *
-02_S0077_00 GBC is NA for all parcels *
 
-get info about netho NA parcels
-```{r nethoInfo}
-# ged indices
-r1 <- filter(ji_key, LABEL=="Frontoparietal-29_R-Cerebellum")$INDEX
-r2 <- filter(ji_key, LABEL=="Visual1-04_R-Accumbens")$INDEX
-#
-which(xii_Ji_parcel$data$subcort==r1)
-which(xii_Ji_parcel$data$subcort==r2)
-# both ROIs assigned NA in NetHo analysis have one single voxel and thus can not calculate NetHo
-# need to remove NA rows without disrupting 
 
-# filter NAs from NetHo
-netho_no_na <- filter(netho_all, !is.na(NetHo))
-```
-  
-save workspace with initial data
-```{r saveInit, paged.print=FALSE}
-# save list of packages
-setwd(project)
-sink("package_versions.txt")
-sessionInfo()
-sink()
 
-# save image
-if(save_outputs==TRUE){
-  save.image(file=file.path(project,"demographics/22q_chr_fmri_init.Rdata"),compress = "bzip2")
-}
-```
+
+
+
 
 harmonize sites with neurocombat
 need to harmonize separately for each measure (rsfa, local connectivity, global connectivity)
