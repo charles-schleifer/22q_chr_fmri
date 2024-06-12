@@ -162,8 +162,7 @@ demo_22q$SEX <-  factor(demo_22q$SEX,levels=c("M","F"),labels=c("M","F"))
 demo_22q$Group <- factor(demo_22q$Group,levels=c("PATIENT-DEL","CONTROL"),labels=c("22qDel","CONTROL"))
 # combine
 demo_22q_napls <- rbind(demo_22q, demo_napls)
-# get age squared column for regression
-demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
+
 ```
 
 
@@ -216,7 +215,10 @@ percent_udvarsme_all$percent_use <- as.numeric(percent_udvarsme_all$percent_use)
 percent_udvarsme_all$MRI_S_ID <- percent_udvarsme_all$sesh
 
 # add movement to demo bl
-demo_multisite_bl <- merge(x=demo_multisite_bl, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+demo_22q_napls <- merge(x=demo_22q_napls, y=percent_udvarsme_all[,c("MRI_S_ID","percent_udvarsme")], by="MRI_S_ID", all.x=TRUE)
+
+# add age^2
+demo_22q_napls$AGE2 <- (demo_22q_napls$AGE)^2
 ```
 
 load fMRI data
@@ -277,13 +279,9 @@ iop_cmat <- lapply(filter(demo_multisite_bl, Site=="IoP")$MRI_S_ID, function(s) 
 cmat_all <- rbind(trio_cmat,prisma_cmat,suny_cmat,rome_cmat,iop_cmat)
 # cmat_all$INDEX %<>% as.numeric
 cmat_all$pearson_r_Fz %<>% as.numeric
+cmat_all$INDEX <- paste0(cmat_all$col1, "_", cmat_all$col2)
+
 ```
-
-
-
-
-
-
 
 
 harmonize sites with neurocombat
@@ -301,11 +299,12 @@ run_neurocombat <- function(input,
                             index_col="INDEX", 
                             id_col="MRI_S_ID", 
                             demo=demo_22q_napls){
+
   # remove site column from input and replace with demo
-  input <- subset(input, select=-site)
+  #input <- subset(input, select=-site)
   input <- merge(x=input, y=demo[,c("MRI_S_ID","Site")], by="MRI_S_ID", all.x=TRUE)
   # get list of indices
-  indices <- unique(input$INDEX)
+  indices <- unique(input[,index_col])
   # cast to wide so that rows are parcel indices and columns are MRI_S_IDs
   data.table::setDT(input)
   input_subcols <- reshape2::dcast(data=input, formula=formula, value.var=var_column) 
@@ -329,151 +328,48 @@ run_neurocombat <- function(input,
   combat_d <- combat$dat.combat %>% as.data.frame
   data.table::setDT(combat_d)
   combat_d$INDEX <- indices
-  combat_d$INDEX %<>% as.numeric
-  combat_l <- melt.data.table(combat_d, id.vars="INDEX") %>% rename("MRI_S_ID"="variable")
+  combat_l <- melt.data.table(combat_d, id.vars=index_col) %>% rename("MRI_S_ID"="variable")
   # merge with input data
-  out <- merge(x=input, y=combat_l, by=c("INDEX", "MRI_S_ID"), all.x=TRUE, all.y=TRUE)
+  out <- merge(x=input, y=combat_l, by=c(index_col, "MRI_S_ID"), all.x=TRUE, all.y=TRUE)
   return(out)
 }
 
-# use only cortical regions
-rsfa_ctx <- filter(rsfa_all, INDEX %in% 1:360)
-netho_ctx <- filter(netho_no_na, INDEX %in% 1:360)
-gbc_ctx <- filter(gbc_all, INDEX %in% 1:360)
-
 # run combat
-rsfa_combat_22q <- run_neurocombat(input=filter(rsfa_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="t_sd")
-rsfa_combat_napls <- run_neurocombat(input=filter(rsfa_ctx, site=="NAPLS2"), var_column="t_sd")
-#rsfa_combat <- rbind(rsfa_combat_22q,rsfa_combat_napls)
-
-netho_combat_22q <- run_neurocombat(input=filter(netho_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="NetHo")
-netho_combat_napls <- run_neurocombat(input=filter(netho_ctx, site=="NAPLS2"), var_column="NetHo")
-#netho_combat <- rbind(netho_combat_22q,netho_combat_napls)
-
-gbc_combat_22q <- run_neurocombat(input=filter(gbc_ctx, site %in% c("UCLAtrio","UCLAprisma","SUNY","Rome","IoP" )), var_column="GBC")
-gbc_combat_napls <- run_neurocombat(input=filter(gbc_ctx, site=="NAPLS2"), var_column="GBC")
-#gbc_combat <- rbind(gbc_combat_22q,gbc_combat_napls)
-
-#netho_combat <- run_neurocombat(input=netho_no_na, var_column="NetHo")
-#gbc_combat <- run_neurocombat(input=gbc_all, var_column="GBC")
+cmat_combat_22q <- run_neurocombat(input=cmat_all[c("MRI_S_ID","pearson_r_Fz","INDEX")], var_column="pearson_r_Fz")
 
 ```
 
 normalize based on control group
 ```{r normalize, message=FALSE, warning=FALSE, paged.print=FALSE}
-# function to get mean and standard dev of hcs for a given parcel to use for normalization
-# takes as input, a long data frame e.g. gbc_combat, vectors of control IDs, and the desired parcel index 
-get_hc_stats <- function(df, hcs_ids, parc){
-  dfh <- filter(df, MRI_S_ID %in% hcs_ids & INDEX == parc)
-  m <- mean(as.numeric(dfh$value))
-  s <- sd(as.numeric(dfh$value))
-  out <- data.frame(parcel_hc_mean=m, parcel_hc_sd=s)
-  return(out)
-}
+# # function to get mean and standard dev of hcs for a given parcel to use for normalization
+# # takes as input, a long data frame e.g. gbc_combat, vectors of control IDs, and the desired parcel index 
+# get_hc_stats <- function(df, hcs_ids, parc){
+#   dfh <- filter(df, MRI_S_ID %in% hcs_ids & INDEX == parc)
+#   m <- mean(as.numeric(dfh$value))
+#   s <- sd(as.numeric(dfh$value))
+#   out <- data.frame(parcel_hc_mean=m, parcel_hc_sd=s)
+#   return(out)
+# }
+# 
+# # function to normalize based on hc mean and sd
+# hc_normalize <- function(df, hcs_ids){
+#   # first get hc stats for all parcels
+#   inds <- unique(df$INDEX)
+#   hc_stats <- lapply(inds, function(p) get_hc_stats(parc=p, df=df, hcs_ids=hcs_ids)) %>% do.call(rbind,.)
+#   hc_stats$INDEX <- inds
+#   # then merge parcel norms with full df
+#   dfn <- merge(x=df, y=hc_stats, by="INDEX", all.x=TRUE)
+#   # normalize data in each parcel based on control mean and sd for that parcel
+#   dfn$value_normed <- (dfn$value - dfn$parcel_hc_mean)/dfn$parcel_hc_sd
+#   return(dfn)
+# }
+# 
+# # get list of all controls
+# hc_ids <- filter(demo_22q_napls, Group=="CONTROL")$MRI_S_ID
+# 
+# cmat_norm <- hc_normalize(df=cmat_combat_22q, hcs_ids=hc_ids)
 
-# function to normalize based on hc mean and sd
-hc_normalize <- function(df, hcs_ids){
-  # first get hc stats for all parcels
-  inds <- unique(df$INDEX)
-  hc_stats <- lapply(inds, function(p) get_hc_stats(parc=p, df=df, hcs_ids=hcs_ids)) %>% do.call(rbind,.)
-  hc_stats$INDEX <- inds
-  # then merge parcel norms with full df
-  dfn <- merge(x=df, y=hc_stats, by="INDEX", all.x=TRUE)
-  # normalize data in each parcel based on control mean and sd for that parcel
-  dfn$value_normed <- (dfn$value - dfn$parcel_hc_mean)/dfn$parcel_hc_sd
-  return(dfn)
-}
 
-# get list of all controls
-hc_ids <- filter(demo_22q_napls, Group=="CONTROL")$MRI_S_ID
-hcn_ids <- filter(demo_22q_napls, Group=="CONTROL-N")$MRI_S_ID
-
-# normalize each measure
-rsfa_norm_22q <- hc_normalize(df=rsfa_combat_22q, hcs_ids=hc_ids)
-rsfa_norm_napls <- hc_normalize(df=rsfa_combat_napls, hcs_ids=hcn_ids)
-rsfa_norm <- rbind(rsfa_norm_22q, rsfa_norm_napls)
-
-netho_norm_22q <- hc_normalize(df=netho_combat_22q, hcs_ids=hc_ids)
-netho_norm_napls <- hc_normalize(df=netho_combat_napls, hcs_ids=hcn_ids)
-netho_norm <- rbind(netho_norm_22q,netho_norm_napls)
-
-gbc_norm_22q <- hc_normalize(df=gbc_combat_22q, hcs_ids=hc_ids)
-gbc_norm_napls <- hc_normalize(df=gbc_combat_napls, hcs_ids=hcn_ids)
-gbc_norm <- rbind(gbc_norm_22q,gbc_norm_napls)
-
-```
-
-plot pre/post combat
-```{r plotComBat}
-# function to plot pre and post combat
-plot_combat <- function(df, raw_col, title=""){
-  # get mean of all parcels per subject pre/post combat to look at distributions
-  subs <- sort(unique(df$MRI_S_ID))
-  sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
-  precombat <- lapply(sublist, function(s) mean(s[,raw_col])) %>% do.call(rbind,.)
-  postcombat <- lapply(sublist, function(s) mean(s$value)) %>% do.call(rbind,.)
-  parc_means <- data.frame(MRI_S_ID=subs, postcombat=as.vector(postcombat), precombat=as.vector(precombat))
-  # add site
-  df$duplicated <- duplicated(df$MRI_S_ID)
-  dup <- filter(df, duplicated==FALSE)[,c("MRI_S_ID","Site")]
-  parc_means_demo <- merge(x=parc_means, y=dup, by="MRI_S_ID")
-  parc_means_demo$Site %<>% as.factor
-  print(nrow(parc_means))
-  print(nrow(parc_means_demo))
-  # plot meean RSFA distributions by site pre combat
-  pl_precombat <- ggplot(parc_means_demo, aes(precombat, fill=Site, after_stat(count)))+
-    geom_density(kernel="gaussian", alpha=0.5)+
-    scale_fill_manual(values=rainbow(13))+
-    theme_classic()+
-    ggtitle(paste("pre-combat",title))
-  
-  # plot meean RSFA distributions by site post combat
-  pl_postcombat <- ggplot(parc_means_demo, aes(postcombat, fill=Site, after_stat(count)))+
-    geom_density(kernel="gaussian", alpha=0.5)+ 
-    scale_fill_manual(values=rainbow(13))+
-    theme_classic()+
-    ggtitle(paste("post-combat",title))
-  
-  ggarrange(pl_precombat,pl_postcombat, nrow=1, common.legend=T,legend="right")
-}
-
-plot_normed <- function(df, name){
-  # get mean of all parcels per subject pre/post combat to look at distributions
-  subs <- sort(unique(df$MRI_S_ID))
-  sublist <- lapply(subs, function(s) data.frame(filter(df, MRI_S_ID==s)))
-  values <- lapply(sublist, function(s) mean(s$value_normed)) %>% do.call(rbind,.)
-  normed <- data.frame(MRI_S_ID=subs, normed=as.vector(values))
-  # add site
-  df$duplicated <- duplicated(df$MRI_S_ID)
-  dup <- filter(df, duplicated==FALSE)[,c("MRI_S_ID","Site")]
-  normed_demo <- merge(x=normed, y=dup, by="MRI_S_ID")
-  normed_demo$Site %<>% as.factor
-  print(nrow(normed_demo))
-  print(nrow(normed_demo))
-  # plot meean RSFA distributions by site post combat
-  pl_postcombat <- ggplot(normed_demo, aes(normed, fill=Site, after_stat(count)))+
-  geom_density(kernel="gaussian", alpha=0.5)+ 
-  #scale_fill_manual(values=rainbow(13))+
-  theme_classic()+
-  ggtitle(paste(name,"normed"))
-  return(pl_postcombat)
-}
-
-norm_plot_rsfa <- plot_normed(rsfa_norm, name="rsfa")
-norm_plot_netho <- plot_normed(netho_norm, name="NetHo")
-norm_plot_gbc <- plot_normed(gbc_norm, name="gbc")
-
-combat_plot_rsfa <- plot_combat(df=rsfa_norm, raw_col="t_sd", title="RSFA")
-combat_plot_netho <- plot_combat(df=netho_norm, raw_col="NetHo", title="NetHo")
-combat_plot_gbc <- plot_combat(df=gbc_norm, raw_col="GBC", title="GBC")
-
-norm_plot_rsfa
-norm_plot_netho
-norm_plot_gbc
-
-combat_plot_rsfa
-combat_plot_netho
-combat_plot_gbc
 ```
 
 convert normed combat results back to wide df merged with demographics
@@ -499,9 +395,7 @@ rows_to_cols <- function(results, demo, index_colname="INDEX", value_var="value_
 }
 
 # get list objects with vector of results column names and demo df merged to results
-rsfa_wide <- rows_to_cols(results=rsfa_norm, demo=demo_22q_napls)
-netho_wide <- rows_to_cols(results=netho_norm, demo=demo_22q_napls)
-gbc_wide <- rows_to_cols(results=gbc_norm, demo=demo_22q_napls)
+cmat_wide <- rows_to_cols(results=cmat_combat_22q, demo=demo_22q_napls, value_var="value")
 ```
 
 test linear models for 22q vs TD and CHR vs TD separately
@@ -584,60 +478,26 @@ get_parcel_group_lm <- function(list,
   # add index column and merge with roi key (assumes column named INDEX in roi_key)
   stats$indexcol <- parc_cols
   stats$INDEX <- gsub(prefix,"",stats$indexcol)
-  out <- merge(x=roi_key, y=stats, by="INDEX", all.x=TRUE, all.y=TRUE)
+  #out <- merge(x=roi_key, y=stats, by="INDEX", all.x=TRUE, all.y=TRUE)
+  out <- stats
   return(out)
 }
 #test <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"),refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
 
 # get main effects of group for each measure
-rsfa_22q_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA 22q significant regions:",sum(rsfa_22q_lms$group_FDR_sig)))
-
-rsfa_chr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHR","CONTROL-N"), refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA CHR significant regions:",sum(rsfa_chr_lms$group_FDR_sig)))
-
-netho_22q_lms <- get_parcel_group_lm(list=netho_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo 22q significant regions:",sum(netho_22q_lms$group_FDR_sig, na.rm=TRUE)))
-
-netho_chr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHR","CONTROL-N"), refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo CHR significant regions:",sum(netho_chr_lms$group_FDR_sig, na.rm=TRUE)))
-
-gbc_22q_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
+cmat_22q_lms <- get_parcel_group_lm(list=cmat_wide, groups=c("22qDel","CONTROL"), refgroup="CONTROL", refsite="UCLAtrio", roi_key=filter(ji_key,INDEX %in% 1:360))
 print(paste("GBC 22q significant regions:",sum(gbc_22q_lms$group_FDR_sig)))
 
-gbc_chr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHR","CONTROL-N"), refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("GBC CHR significant regions:",sum(gbc_chr_lms$group_FDR_sig)))
-```
-
-test CHRc vs TD and CHRc vs CHR
-```{r chrcLM}
-# test CHRc vs CONTROL-N
-rsfa_chrc_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA CHRc vs Control significant regions:",sum(rsfa_chrc_lms$group_FDR_sig)))
-
-netho_chrc_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo CHRc vs Control significant regions:",sum(netho_chrc_lms$group_FDR_sig)))
-
-gbc_chrc_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CONTROL-N"), groupcol="GroupConvert", refgroup="CONTROL-N", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("GBC CHRc vs Control significant regions:",sum(gbc_chrc_lms$group_FDR_sig)))
-
-# test CHRc vs CHR
-rsfa_chrcchr_lms <- get_parcel_group_lm(list=rsfa_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("RSFA CHRc vs CHR significant regions:",sum(rsfa_chrcchr_lms$group_FDR_sig)))
-
-netho_chrcchr_lms <- get_parcel_group_lm(list=netho_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("NetHo CHRc vs CHR significant regions:",sum(netho_chrcchr_lms$group_FDR_sig)))
-
-gbc_chrcchr_lms <- get_parcel_group_lm(list=gbc_wide, groups=c("CHRc","CHR"), groupcol="GroupConvert", refgroup="CHR", refsite="NAPLS1", roi_key=filter(ji_key,INDEX %in% 1:360))
-print(paste("GBC CHRc vs CHR significant regions:",sum(gbc_chrcchr_lms$group_FDR_sig)))
 ```
 
 save workspace with main data
 ```{r saveMain, paged.print=FALSE}
 # save image
+save_outputs=TRUE
 if(save_outputs==TRUE){
-  save.image(file=file.path(project,"git_exclude/22q_chr_fmri_main.Rdata"),compress = "gzip")
+  save.image(file=file.path(project,"git_exclude/22q_chr_fmri_cmat.Rdata"),compress = "gzip")
 }
+save_outputs=FALSE
 ```
 
 plot group difference maps
